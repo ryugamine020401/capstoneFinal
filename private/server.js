@@ -265,14 +265,14 @@ server_io.on('connection', (socket) => {
         }
     });
     /* when somebody enter main page */
-    socket.on('new-user-request', (userid, username) => {
+    socket.on('new-user-request', (userid, username, type) => {
         if (socket_arr.indexOf(socket) == -1) {
             socket_arr = [...socket_arr, socket];
             userid_arr = [...userid_arr, userid];
             username_arr = [...username_arr, username];
             yt_arr = [...yt_arr, socket];
             server_io.emit('new-user-id', userid, username);
-            server_io.emit('all-user-id', userid_arr, username_arr);
+            server_io.emit('all-user-id', userid_arr, username_arr, type);
             socket.emit('chat-history', chat_history);
             socket.emit('musicroom-refresh', '', get_MusicList());
         }

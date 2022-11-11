@@ -181,7 +181,9 @@ function listenStreaming() {
         socket.on('close-audio', (userid) => {
             if (entered) {
                 if (call.peer == userid) {
-                    audio.remove();
+                    if (document.getElementById('audio-'+userid)) {
+                        document.getElementById('audio-'+userid).remove();
+                    }
                     let icon = document.getElementById('mic-' + userid);
                     let container = document.getElementById('audience-container-' + userid);
                     if (icon) {
@@ -249,6 +251,8 @@ function add_newVideo(container, video, videoStream, videoName, username, stream
 
 /* creat <audio> tag in DOM */
 function add_newAudio(audio, audioStream, userid) {
+    let exist = document.getElementById('audio-' + userid);
+    if (exist) return;
     let audioBox = document.getElementById("audioBox");
     audio.srcObject = audioStream;
     audio.volume = 0.5;
@@ -264,6 +268,8 @@ function add_newAudio(audio, audioStream, userid) {
 }
 
 function add_ytAudio(audio, src, time, loop, pause) {
+    let exist = document.getElementById('yt-music');
+    if (exist) return;
     let audioBox = document.getElementById("audioBox");
     audio.src = src;
     if (time != 0) {
@@ -544,7 +550,7 @@ function join() {
         document.querySelector('.topArea').style.display = 'block';
         document.querySelector('.mainArea').style.display = 'flex';
         /* send real request to server when audio ended */
-        socket.emit('new-user-request', myid, myname);
+        socket.emit('new-user-request', myid, myname, 'new');
     });
     audio.play();
 }
@@ -632,6 +638,9 @@ function socketInit() {
 
     /* server no response */
     socket.on('disconnect', () => {
+        if (document.getElementById('yt-music')) {
+            document.getElementById('yt-music').remove();
+        }
         alert('斷線...');
         // location.reload();
     });
@@ -639,7 +648,9 @@ function socketInit() {
     /* server connected */
     socket.on('old-client-check', () => {
         if (entered) {
-            socket.emit('new-user-request', myid, myname);
+            document.getElementById("musicroom").innerHTML = '';
+            document.getElementById("chatroom").innerHTML = '';
+            socket.emit('new-user-request', myid, myname, 'old');
             alert('已重新建立連線');
         }
     });
@@ -709,7 +720,7 @@ function socketInit() {
 
     /* ---------------------------------------- */
     /* server give all user id: refresh user-id-list */
-    socket.on('all-user-id', (id_arr, name_arr) => {
+    socket.on('all-user-id', (id_arr, name_arr, type) => {
         userid_arr = id_arr;
         username_arr = name_arr;
         document.getElementById("number-of-audience").innerText = `成員 : ${userid_arr.length}`;
@@ -746,6 +757,11 @@ function socketInit() {
                 audience.append(container);
             }
         });
+        if (type == 'old') {
+            if (myVideoStream) brocastStreaming(myVideoStream);
+            if (myAudioStream) brocastStreaming(myAudioStream);
+            if (myScreenStream) brocastStreaming(myScreenStream);
+        }
     });
 
     /* remove username when somebody left the room */
