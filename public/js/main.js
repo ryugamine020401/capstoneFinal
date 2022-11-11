@@ -202,7 +202,7 @@ function listenStreaming() {
 function add_newVideo(container, video, videoStream, videoName, username, streamId) {
     let videoBox = document.getElementById("videoBox");
     let exist = document.getElementById('video-' + streamId);
-    if (exist) return;
+    if (exist) exist.remove();
     /* container */
     container.className = 'video-container';
     container.id = 'video-' + streamId;
@@ -252,7 +252,7 @@ function add_newVideo(container, video, videoStream, videoName, username, stream
 /* creat <audio> tag in DOM */
 function add_newAudio(audio, audioStream, userid) {
     let exist = document.getElementById('audio-' + userid);
-    if (exist) return;
+    if (exist) exist.remove();
     let audioBox = document.getElementById("audioBox");
     audio.srcObject = audioStream;
     audio.volume = 0.5;
