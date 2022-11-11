@@ -316,14 +316,11 @@ function get_AudioDB(stream) {
         let buffer = e.inputBuffer.getChannelData(0);
         let maxVal = Math.max.apply(Math, buffer);
         let dB = Math.round(maxVal * 100);
-        // console.log(dB);
         if (!lastSpeak && dB >= 3) {
             lastSpeak = true;
-            // console.log('說話');
             socket.emit('audio-state', myid, true);
         } else if (lastSpeak && dB < 3) {
             lastSpeak = false;
-            // console.log('不說話');
             socket.emit('audio-state', myid, false);
         }
     };
@@ -632,7 +629,27 @@ function Init() {
 function socketInit() {
     /* connect to server */
     socket = io.connect();
-    
+
+    /* server no response */
+    socket.on('disconnect', () => {
+        alert('斷線...');
+        // location.reload();
+    });
+
+    /* server connected */
+    socket.on('old-client-check', () => {
+        if (entered) {
+            socket.emit('new-user-request', myid, myname);
+            alert('已重新建立連線');
+        }
+    });
+
+    /* peer init when client open the page, will receive a peer-id */
+    myPeer.on('open', (id) => {
+        myid = id;
+    });
+
+    /* ---------------------------------------- */
     /* remove all command room message */
     socket.on('musicroom-clean', () => {
         document.getElementById("musicroom").innerHTML = '';
@@ -760,7 +777,7 @@ function socketInit() {
     });
 
     /* ---------------------------------------- */
-     socket.on('yt-stream', (stream_url) => {
+    socket.on('yt-stream', (stream_url) => {
         if (entered) {
             let audio = document.createElement("audio");
             add_ytAudio(audio, stream_url, 0, global_loop, false);
@@ -777,11 +794,7 @@ function socketInit() {
         }
     });
 
-    /* peer init when client open the page, will receive a peer-id */
-    myPeer.on('open', (id) => {
-        myid = id;
-    });
-
+    /* ---------------------------------------- */
     socket.on('audio-state', (userid, value) => {
         let icon = document.getElementById('mic-' + userid);
         let container = document.getElementById('audience-container-' + userid);
@@ -790,6 +803,7 @@ function socketInit() {
             container.style.color = (value)? 'orange': '#eeeeee';
         }
     });
+
 }
 
 /* ###################################################################### */
