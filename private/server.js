@@ -43,7 +43,7 @@ let music_list = [];
 let yt_arr = [];
 
 let lastTime = Date.now();
-const command_def = `####################
+const command_def = `====================
 -- 播放音樂
 play YouTube-URL
 play KeyWord
@@ -71,17 +71,17 @@ list
 
 -- 清除訊息 (個人)
 cls
-####################`;
+====================`;
 
 /* ###################################################################### */
 function get_MusicList() {
     if (!music_list[0]) return '--No Music--';
-    let message = '####################\n';
+    let message = '====================\n';
     music_list.map( (music, i) => {
         if (i != 0) message += `\n\nMusic ${i} : ${music.title}`;
         else  message += `*Now Playing : ${music.title}`;
     });
-    message += '\n####################';
+    message += '\n====================';
     return message;
 }
 
@@ -241,25 +241,27 @@ server_io = require('socket.io')(server);
 server_io.on('connection', (socket) => {
     /* when somebody disconnect */
     socket.on('disconnect', () => {
-        /* clear chatroom if nobody online */
-        if (!socket_arr[1]) {
-            chat_history = [];
-            music_list = [];
-        }
-        /* find the left one from arr */
         let index = socket_arr.indexOf(socket);
-        let leaveid =  userid_arr[index];
-        /* remove the left one in arr */
-        socket_arr.splice(index, 1);
-        userid_arr.splice(index, 1);
-        username_arr.splice(index, 1);
-        index = yt_arr.indexOf(socket);
-        if (index != -1) yt_arr.splice(index, 1);
-        /* update clients data */
-        server_io.emit('all-user-id', userid_arr, username_arr);
-        server_io.emit('someone-left', leaveid);
-        server_io.emit('close-video', leaveid, 'leave');
-        server_io.emit('close-audio', leaveid);
+        if (index != -1) {
+            /* find the left one from arr */
+            let leaveid =  userid_arr[index];
+            /* remove the left one in arr */
+            socket_arr.splice(index, 1);
+            userid_arr.splice(index, 1);
+            username_arr.splice(index, 1);
+            index = yt_arr.indexOf(socket);
+            if (index != -1) yt_arr.splice(index, 1);
+            /* update clients data */
+            server_io.emit('all-user-id', userid_arr, username_arr);
+            server_io.emit('someone-left', leaveid);
+            server_io.emit('close-video', leaveid, 'leave');
+            server_io.emit('close-audio', leaveid);
+            /* clear chatroom if nobody online */
+            if (!socket_arr[0]) {
+                chat_history = [];
+                music_list = [];
+            }
+        }
     });
     /* when somebody enter main page */
     socket.on('new-user-request', (userid, username) => {
