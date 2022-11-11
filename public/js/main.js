@@ -133,7 +133,7 @@ function brocastStreaming(stream) {
 
 /* p2p receive stream:
    receive stream pakage and control <video>/<audio> obj in DOM if somebody start/stop a stream */
-function listenStreaming() {
+   function listenStreaming() {
     myPeer.on('call', (call) => {
         call.answer(null);
         let container = document.createElement('div');
@@ -181,9 +181,7 @@ function listenStreaming() {
         socket.on('close-audio', (userid) => {
             if (entered) {
                 if (call.peer == userid) {
-                    if (document.getElementById('audio-'+userid)) {
-                        document.getElementById('audio-'+userid).remove();
-                    }
+                    audio.remove();
                     let icon = document.getElementById('mic-' + userid);
                     let container = document.getElementById('audience-container-' + userid);
                     if (icon) {
@@ -202,7 +200,7 @@ function listenStreaming() {
 function add_newVideo(container, video, videoStream, videoName, username, streamId) {
     let videoBox = document.getElementById("videoBox");
     let exist = document.getElementById('video-' + streamId);
-    if (exist) exist.remove();
+    if (exist) return;
     /* container */
     container.className = 'video-container';
     container.id = 'video-' + streamId;
@@ -252,7 +250,7 @@ function add_newVideo(container, video, videoStream, videoName, username, stream
 /* creat <audio> tag in DOM */
 function add_newAudio(audio, audioStream, userid) {
     let exist = document.getElementById('audio-' + userid);
-    if (exist) exist.remove();
+    if (exist) return;
     let audioBox = document.getElementById("audioBox");
     audio.srcObject = audioStream;
     audio.volume = 0.5;
@@ -638,9 +636,16 @@ function socketInit() {
 
     /* server no response */
     socket.on('disconnect', () => {
-        if (document.getElementById('yt-music')) {
-            document.getElementById('yt-music').remove();
-        }
+        let audios = document.querySelectorAll('audio');
+        let videos = document.querySelectorAll('.video-container');
+        let idv1 = myVideoStream? 'video-'+myVideoStream.id: '';
+        let idv2 = myScreenStream? 'video-'+myScreenStream.id: '';
+        audios.forEach((audio) => {
+            if (audio.id != 'audio-' + myid) audio.remove();
+        });
+        videos.forEach((video) => {
+            if (video.id != idv1 && video.id != idv2) video.remove();
+        });
         alert('斷線...');
         // location.reload();
     });
