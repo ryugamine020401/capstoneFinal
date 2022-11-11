@@ -267,7 +267,7 @@ function add_newAudio(audio, audioStream, userid) {
 
 function add_ytAudio(audio, src, time, loop, pause) {
     let exist = document.getElementById('yt-music');
-    if (exist) return;
+    if (exist) exist.remove();
     let audioBox = document.getElementById("audioBox");
     audio.src = src;
     if (time != 0) {
@@ -283,9 +283,9 @@ function add_ytAudio(audio, src, time, loop, pause) {
         else audio.pause();
     });
     audio.addEventListener('ended', () => {
-        socket.emit('yt-ended', audio.src);
         audio.src = null;
         audio.remove();
+        socket.emit('yt-ended', audio.src);
     });
     socket.on('yt-operate', (operate) => {
         if (operate == 'pause') audio.pause();
