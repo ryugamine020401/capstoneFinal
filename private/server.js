@@ -239,6 +239,7 @@ server = https.createServer(options[OPTION_KEY], (request, response) => {
 /* ###################################################################### */
 server_io = require('socket.io')(server);
 server_io.on('connection', (socket) => {
+    socket.emit('old-client-check');
     /* when somebody disconnect */
     socket.on('disconnect', () => {
         let index = socket_arr.indexOf(socket);
@@ -266,7 +267,7 @@ server_io.on('connection', (socket) => {
     /* when somebody enter main page */
     socket.on('new-user-request', (userid, username) => {
         if (socket_arr.indexOf(socket) == -1) {
-            socket_arr = [...socket_arr, socket]
+            socket_arr = [...socket_arr, socket];
             userid_arr = [...userid_arr, userid];
             username_arr = [...username_arr, username];
             yt_arr = [...yt_arr, socket];
