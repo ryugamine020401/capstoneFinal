@@ -237,7 +237,11 @@ server = https.createServer(options[OPTION_KEY], (request, response) => {
 });
 
 /* ###################################################################### */
-server_io = require('socket.io')(server);
+server_io = require('socket.io')(server, {
+    pingTimeout: 5000,
+    pingInterval: 500
+});
+
 server_io.on('connection', (socket) => {
     socket.emit('old-client-check');
     /* when somebody disconnect */
