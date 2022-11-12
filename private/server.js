@@ -276,7 +276,7 @@ server_io.on('connection', (socket) => {
             username_arr = [...username_arr, username];
             yt_arr = [...yt_arr, socket];
             server_io.emit('new-user-id', userid, username);
-            server_io.emit('all-user-id', userid_arr, username_arr, type);
+            server_io.emit('all-user-id', userid_arr, username_arr, type+userid);
             socket.emit('chat-history', chat_history);
             socket.emit('musicroom-refresh', '', get_MusicList());
         }

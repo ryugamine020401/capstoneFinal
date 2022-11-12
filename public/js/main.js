@@ -170,13 +170,15 @@ function listenStreaming() {
                     }
                 /* ---------------------------------------- */
                 } else if (type == 'audio') {
-                    add_newAudio(audio, remoteStream, call.peer);
-                    set_MicIcon(remoteStream, call.peer);
-                    audio_arr = [audio, ...audio_arr];
-                    socket.once('close-audio' + call.peer, () => {
-                        console.log(`${username} : close audio`);
-                        audio.remove();
-                    });
+                    let done = add_newAudio(audio, remoteStream, call.peer);
+                    if (done) {
+                        set_MicIcon(remoteStream, call.peer);
+                        audio_arr = [audio, ...audio_arr];
+                        socket.once('close-audio' + call.peer, () => {
+                            console.log(`${username} : close audio`);
+                            audio.remove();
+                        });
+                    }
                 }
                 /* ---------------------------------------- */
             }
@@ -271,7 +273,7 @@ function add_newVideo(container, video, videoStream, videoName, username, stream
 /* creat <audio> tag in DOM */
 function add_newAudio(audio, audioStream, userid) {
     let exist = document.getElementById('audio-' + userid);
-    if (exist) return;
+    if (exist) return false;
     let audioBox = document.getElementById("audioBox");
     audio.srcObject = audioStream;
     audio.volume = 0.5;
@@ -284,6 +286,7 @@ function add_newAudio(audio, audioStream, userid) {
     if (icon) {
         icon.src = MIC_ON_URL;
     }
+    return true;
 }
 
 function add_ytAudio(audio, src, time, loop, pause) {
@@ -746,7 +749,8 @@ function socketInit() {
                 audience.append(container);
             }
         });
-        if (type == 'old') {
+        if (type == 'old' + myid) {
+            console.log('重新廣播');
             if (myVideoStream) brocastStreaming(myVideoStream);
             if (myAudioStream) brocastStreaming(myAudioStream);
             if (myScreenStream) brocastStreaming(myScreenStream);
