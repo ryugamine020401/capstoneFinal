@@ -259,8 +259,8 @@ server_io.on('connection', (socket) => {
             /* update clients data */
             server_io.emit('all-user-id', userid_arr, username_arr);
             server_io.emit('someone-left', leaveid);
-            server_io.emit('close-video', leaveid, 'leave');
-            server_io.emit('close-audio', leaveid);
+            server_io.emit('close-video' + leaveid, 'leave');
+            server_io.emit('close-audio' + leaveid);
             /* clear chatroom if nobody online */
             if (!socket_arr[0]) {
                 chat_history = [];
@@ -298,7 +298,7 @@ server_io.on('connection', (socket) => {
         else if (!ctrl_BOT(socket, command)) socket.emit('musicroom-refresh', socket.id, '--Invalid Input--');
     });
     /* when music audio ended */
-    socket.on('yt-ended', (Stream) => {
+    socket.on('yt-ended', () => {
         let Time = Date.now();
         if (Time - lastTime > 1800) {
             lastTime = Time;
@@ -314,18 +314,15 @@ server_io.on('connection', (socket) => {
             let index = yt_arr.indexOf(socket2);
             if (index != -1) yt_arr.splice(index, 1);
         });
-    }); 
+    });
 
     /* ---------------------------------------- */
     /* somebody stop capture */
     socket.on('stop-videoStream', (userid, streamId) => {
-        server_io.emit('close-video', userid, streamId);
+        server_io.emit('close-video' + userid, streamId);
     });
     socket.on('stop-audioStream', (userid) => {
-        server_io.emit('close-audio', userid);
-    });
-    socket.on('audio-state', (userid, value) => {
-        server_io.emit('audio-state', userid, value);
+        server_io.emit('close-audio' + userid);
     });
     
 });
