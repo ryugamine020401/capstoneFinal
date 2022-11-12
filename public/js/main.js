@@ -66,10 +66,6 @@ let video_container_arr = []
 let video_numbering_arr = [];
 
 /* ---------------------------------------- */
-let audioContext = null;
-let mediaStreamSource = null;
-let scriptProcessor = null;
-
 let myVideoStream = null;
 let myVideoContainer = document.createElement('div');
 let myVideo = document.createElement('video');
@@ -133,74 +129,100 @@ function brocastStreaming(stream) {
 
 /* p2p receive stream:
    receive stream pakage and control <video>/<audio> obj in DOM if somebody start/stop a stream */
-   function listenStreaming() {
+function listenStreaming() {
     myPeer.on('call', (call) => {
         call.answer(null);
-        let container = document.createElement('div');
-        let video = document.createElement('video');
-        let audio = document.createElement('audio');
-        let videoName = document.createElement('div');
-        video.muted = mutedState;
-        audio.muted = mutedState;
-        /* ---------------------------------------- */
         call.on('stream', (remoteStream) => {
             if (remoteStream) {
+                /* ---------------------------------------- */
+                let container = document.createElement('div');
+                let video = document.createElement('video');
+                let audio = document.createElement('audio');
+                let videoName = document.createElement('div');
+                video.muted = mutedState;
+                audio.muted = mutedState;
+                /* ---------------------------------------- */
                 let type;
                 let username = username_arr[userid_arr.indexOf(call.peer)];
-                try {
-                    type = remoteStream.getTracks()[1]['kind'];
-                } catch {
-                    type = remoteStream.getTracks()[0]['kind'];
-                }
+                try { type = remoteStream.getTracks()[1].kind; }
+                catch { type = remoteStream.getTracks()[0].kind; }
+                /* ---------------------------------------- */
                 if (type == 'video') {
-                    add_newVideo(container, video, remoteStream, videoName, username, remoteStream.id);
-                    video_arr = [video, ...video_arr];
-                    video_arrange();
+                    let done = add_newVideo(container, video, remoteStream, videoName, username, remoteStream.id);
+                    if (done) {
+                        video_arrange();
+                        video_arr = [video, ...video_arr];
+                        socket.once('close-video' + call.peer + remoteStream.id, (other) => {
+                            console.log(`${username} : close video`);
+                            let video = document.getElementById('video-' + remoteStream.id);
+                            if (video) {
+                                video.remove();
+                                video_arrange();
+                                if (!other) socket.off('close-video-all' + call.peer);
+                            }
+                        });
+                        socket.once('close-video-all' + call.peer, () => {
+                            console.log(`${username} : close video`);
+                            container.remove();
+                            video_arrange();
+                            socket.off('close-video' + call.peer + remoteStream.id);
+                        });
+                    }
+                /* ---------------------------------------- */
                 } else if (type == 'audio') {
-                    add_newAudio(audio, remoteStream, call.peer);
-                    audio_arr = [audio, ...audio_arr];
-                }
-            }
-        });
-        /* ---------------------------------------- */
-        socket.on('close-video', (userid, streamId) => {
-            if (entered) {
-                if (streamId != 'leave') {
-                    if (document.getElementById('video-'+streamId)) {
-                        document.getElementById('video-'+streamId).remove();
-                        video_arrange();
-                    }
-                } else {
-                    if (call.peer == userid) {
-                        container.remove();
-                        video_arrange();
+                    let done = add_newAudio(audio, remoteStream, call.peer);
+                    if (done) {
+                        set_MicIcon(remoteStream, call.peer);
+                        audio_arr = [audio, ...audio_arr];
+                        socket.once('close-audio' + call.peer, () => {
+                            console.log(`${username} : close audio`);
+                            audio.remove();
+                        });
                     }
                 }
+                /* ---------------------------------------- */
             }
         });
-        socket.on('close-audio', (userid) => {
-            if (entered) {
-                if (call.peer == userid) {
-                    audio.remove();
-                    let icon = document.getElementById('mic-' + userid);
-                    let container = document.getElementById('audience-container-' + userid);
-                    if (icon) {
-                        icon.src = MIC_OFF_URL;
-                        container.style.color = '#eeeeee';
-                    }
-                }
-            }
-        });
-        /* ---------------------------------------- */
     });
 }
 
 /* ###################################################################### */
+function set_MicIcon(stream, userid) {
+    let lastSpeak = false;
+    let icon = document.getElementById('mic-' + userid);
+    let container = document.getElementById('audience-container-' + userid);
+    let audioContext = new (window.AudioContext || window.webkitAudioContext);
+    let mediaStreamSource = audioContext.createMediaStreamSource(stream);
+    let scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+    mediaStreamSource.connect(scriptProcessor);
+    scriptProcessor.connect(audioContext.destination);
+    scriptProcessor.onaudioprocess = (e) => {
+        let buffer = e.inputBuffer.getChannelData(0);
+        let maxVal = Math.max.apply(Math, buffer);
+        let dB = Math.round(maxVal * 100);
+        if (!lastSpeak && dB >= 3) {
+            if (icon) icon.src = MIC_SPEAK_URL;
+            if (container) container.style.color = 'orange';
+            lastSpeak = true;
+        } else if (lastSpeak && dB < 3) {
+            if (icon) icon.src = MIC_ON_URL;
+            if (container) container.style.color = '#eeeeee';
+            lastSpeak = false;
+        }
+    };
+    socket.once('close-audio' + userid, () => {
+        mediaStreamSource.disconnect();
+        scriptProcessor.disconnect();
+        if (icon) icon.src = MIC_OFF_URL;
+        if (container) container.style.color = '#eeeeee';
+    });
+}
+
 /* creat <video> tag in DOM */
 function add_newVideo(container, video, videoStream, videoName, username, streamId) {
     let videoBox = document.getElementById("videoBox");
     let exist = document.getElementById('video-' + streamId);
-    if (exist) return;
+    if (exist) return false;
     /* container */
     container.className = 'video-container';
     container.id = 'video-' + streamId;
@@ -245,12 +267,13 @@ function add_newVideo(container, video, videoStream, videoName, username, stream
     container.append(video);
     container.append(videoName);
     videoBox.append(container);
+    return true;
 }
 
 /* creat <audio> tag in DOM */
 function add_newAudio(audio, audioStream, userid) {
     let exist = document.getElementById('audio-' + userid);
-    if (exist) return;
+    if (exist) return false;
     let audioBox = document.getElementById("audioBox");
     audio.srcObject = audioStream;
     audio.volume = 0.5;
@@ -263,6 +286,7 @@ function add_newAudio(audio, audioStream, userid) {
     if (icon) {
         icon.src = MIC_ON_URL;
     }
+    return true;
 }
 
 function add_ytAudio(audio, src, time, loop, pause) {
@@ -283,9 +307,9 @@ function add_ytAudio(audio, src, time, loop, pause) {
         else audio.pause();
     });
     audio.addEventListener('ended', () => {
+        socket.emit('yt-ended');
         audio.src = null;
         audio.remove();
-        socket.emit('yt-ended', audio.src);
     });
     socket.on('yt-operate', (operate) => {
         if (operate == 'pause') audio.pause();
@@ -309,36 +333,6 @@ function add_ytAudio(audio, src, time, loop, pause) {
 }
 
 /* ###################################################################### */
-function get_AudioDB(stream) {
-    let lastSpeak = false;
-    audioContext = new (window.AudioContext || window.webkitAudioContext);
-    mediaStreamSource = audioContext.createMediaStreamSource(stream);
-    scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
-    mediaStreamSource.connect(scriptProcessor);
-    scriptProcessor.connect(audioContext.destination);
-    scriptProcessor.onaudioprocess = function(e) {
-        let buffer = e.inputBuffer.getChannelData(0);
-        let maxVal = Math.max.apply(Math, buffer);
-        let dB = Math.round(maxVal * 100);
-        if (!lastSpeak && dB >= 3) {
-            lastSpeak = true;
-            socket.emit('audio-state', myid, true);
-        } else if (lastSpeak && dB < 3) {
-            lastSpeak = false;
-            socket.emit('audio-state', myid, false);
-        }
-    };
-}
-
-function stop_AudioDB() {
-    mediaStreamSource.disconnect();
-    scriptProcessor.disconnect();
-    audioContext = null;
-    mediaStreamSource = null;
-    scriptProcessor = null;
-}
-
-/* ###################################################################### */
 /* button onclick event:
    open/close camera and control streaming... */
 async function toggleCamera() {
@@ -358,7 +352,7 @@ async function toggleCamera() {
             myVideoStream.getTracks().forEach((track) => {track.stop();});
             myVideoContainer.remove();
             video_arrange();
-            socket.emit('stop-videoStream', myid, myVideoStream.id);
+            socket.emit('stop-videoStream', myid, myVideoStream.id, myScreenStream!=null);
             myVideoStream = null;
         }
         cameraStatus = false;
@@ -373,8 +367,8 @@ async function toggleMic() {
         myAudioStream = await navigator.mediaDevices.getUserMedia(AUDIO_QUALITY)
         .catch( (error) => {alert(error.message);} );
         if (myAudioStream) {
-            get_AudioDB(myAudioStream);
             add_newAudio(myAudio, myAudioStream, myid);
+            set_MicIcon(myAudioStream, myid);
             brocastStreaming(myAudioStream);
             micStatus = true;
             document.getElementById("mic-toggle").innerText = "關閉麥克風";
@@ -382,17 +376,10 @@ async function toggleMic() {
     } else {
         if (myAudioStream) {
             /* stop fetch media */
-            stop_AudioDB();
             myAudioStream.getTracks().forEach((track) => {track.stop();});
             myAudio.remove();
             socket.emit('stop-audioStream', myid);
             myAudioStream = null;
-            let icon = document.getElementById('mic-' + myid);
-            let container = document.getElementById('audience-container-' + myid);
-            if (icon) {
-                icon.src = MIC_OFF_URL;
-                container.style.color = '#eeeeee';
-            }
         }
         micStatus = false;
         document.getElementById("mic-toggle").innerText = "開啟麥克風";
@@ -416,7 +403,7 @@ async function toggleScreen() {
                 myScreenStream.getTracks().forEach((track) => {track.stop();});
                 myScreenContainer.remove();
                 video_arrange();
-                socket.emit('stop-videoStream', myid, myScreenStream.id);
+                socket.emit('stop-videoStream', myid, myScreenStream.id, myVideoStream!=null);
                 myScreenStream = null;
                 screenStatus = false;
                 document.getElementById("screen-toggle").innerText = "開啟畫面分享";
@@ -428,7 +415,7 @@ async function toggleScreen() {
             myScreenStream.getTracks().forEach((track) => {track.stop();});
             myScreenContainer.remove();
             video_arrange();
-            socket.emit('stop-videoStream', myid, myScreenStream.id);
+            socket.emit('stop-videoStream', myid, myScreenStream.id, myVideoStream!=null);
             myScreenStream = null;
         }
         screenStatus = false;
@@ -762,7 +749,8 @@ function socketInit() {
                 audience.append(container);
             }
         });
-        if (type == 'old') {
+        if (type == 'old' + myid) {
+            console.log('重新廣播');
             if (myVideoStream) brocastStreaming(myVideoStream);
             if (myAudioStream) brocastStreaming(myAudioStream);
             if (myScreenStream) brocastStreaming(myScreenStream);
@@ -812,16 +800,6 @@ function socketInit() {
                 audio = document.createElement("audio");
                 add_ytAudio(audio, pack.src, pack.time, pack.loop, pack.pause);
             }
-        }
-    });
-
-    /* ---------------------------------------- */
-    socket.on('audio-state', (userid, value) => {
-        let icon = document.getElementById('mic-' + userid);
-        let container = document.getElementById('audience-container-' + userid);
-        if (icon) {
-            icon.src = (value)? MIC_SPEAK_URL: MIC_ON_URL;
-            container.style.color = (value)? 'orange': '#eeeeee';
         }
     });
 
