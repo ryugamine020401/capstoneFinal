@@ -42,7 +42,6 @@ const SCREEN_QUALITY = {
 
 const MIC_ON_URL = 'media/icon/mic-on.png';
 const MIC_OFF_URL = 'media/icon/mic-off.png';
-const MIC_SPEAK_URL = 'media/icon/mic-speaking.png';
 
 /* ---------------------------------------- */
 let myname;
@@ -191,6 +190,7 @@ function set_MicIcon(stream, userid) {
     let lastSpeak = false;
     let icon = document.getElementById('mic-' + userid);
     let container = document.getElementById('audience-container-' + userid);
+    if (icon) icon.src = MIC_ON_URL;
     let audioContext = new (window.AudioContext || window.webkitAudioContext);
     let mediaStreamSource = audioContext.createMediaStreamSource(stream);
     let scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
@@ -201,11 +201,9 @@ function set_MicIcon(stream, userid) {
         let maxVal = Math.max.apply(Math, buffer);
         let dB = Math.round(maxVal * 100);
         if (!lastSpeak && dB >= 3) {
-            if (icon) icon.src = MIC_SPEAK_URL;
             if (container) container.style.color = 'orange';
             lastSpeak = true;
         } else if (lastSpeak && dB < 3) {
-            if (icon) icon.src = MIC_ON_URL;
             if (container) container.style.color = '#eeeeee';
             lastSpeak = false;
         }
@@ -282,10 +280,6 @@ function add_newAudio(audio, audioStream, userid) {
         audio.play();
     });
     audioBox.append(audio);
-    let icon = document.getElementById('mic-' + userid);
-    if (icon) {
-        icon.src = MIC_ON_URL;
-    }
     return true;
 }
 
@@ -540,23 +534,11 @@ function join() {
     audio.play();
 }
 
-function load_Img(src) {
-    let img = document.createElement('img');
-    img.src = src;
-    document.body.append(img);
-    img.remove();
-}
-
 function Init() {
     /* lock right-click */
     document.oncontextmenu = function(){
         window.event.returnValue = false; 
     }
-
-    /* load img resource */
-    load_Img(MIC_ON_URL);
-    load_Img(MIC_OFF_URL);
-    load_Img(MIC_SPEAK_URL);
 
     /* add join event */
     let join_btn = document.getElementById("join-check");

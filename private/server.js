@@ -205,7 +205,6 @@ server = https.createServer(options[OPTION_KEY], (request, response) => {
         case '/js/main.js':
         case '/media/icon/mic-off.png':
         case '/media/icon/mic-on.png':
-        case '/media/icon/mic-speaking.png':
             fs.readFile(parent + path, (error, data) => {
                 if (error) {
                     response.writeHead(404);
@@ -237,10 +236,7 @@ server = https.createServer(options[OPTION_KEY], (request, response) => {
 });
 
 /* ###################################################################### */
-server_io = require('socket.io')(server, {
-    pingTimeout: 5000,
-    pingInterval: 500
-});
+server_io = require('socket.io')(server);
 
 server_io.on('connection', (socket) => {
     /* when somebody disconnect */
