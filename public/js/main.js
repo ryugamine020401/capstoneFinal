@@ -535,9 +535,16 @@ function join() {
         document.querySelector('.topArea').style.display = 'block';
         document.querySelector('.mainArea').style.display = 'flex';
         /* send real request to server when audio ended */
-        socket.emit('new-user-request', myid, myname, 'new');
+        socket.emit('new-user-request', myid, myname);
     });
     audio.play();
+}
+
+function load_Img(src) {
+    let img = document.createElement('img');
+    img.src = src;
+    document.body.append(img);
+    img.remove();
 }
 
 function Init() {
@@ -545,6 +552,11 @@ function Init() {
     document.oncontextmenu = function(){
         window.event.returnValue = false; 
     }
+
+    /* load img resource */
+    load_Img(MIC_ON_URL);
+    load_Img(MIC_OFF_URL);
+    load_Img(MIC_SPEAK_URL);
 
     /* add join event */
     let join_btn = document.getElementById("join-check");
@@ -623,28 +635,8 @@ function socketInit() {
 
     /* server no response */
     socket.on('disconnect', () => {
-        let audios = document.querySelectorAll('audio');
-        let videos = document.querySelectorAll('.video-container');
-        let idv1 = myVideoStream? 'video-'+myVideoStream.id: '';
-        let idv2 = myScreenStream? 'video-'+myScreenStream.id: '';
-        audios.forEach((audio) => {
-            if (audio.id != 'audio-' + myid) audio.remove();
-        });
-        videos.forEach((video) => {
-            if (video.id != idv1 && video.id != idv2) video.remove();
-        });
-        alert('斷線...');
-        // location.reload();
-    });
-
-    /* server connected */
-    socket.on('old-client-check', () => {
-        if (entered) {
-            document.getElementById("musicroom").innerHTML = '';
-            document.getElementById("chatroom").innerHTML = '';
-            socket.emit('new-user-request', myid, myname, 'old');
-            alert('已重新建立連線');
-        }
+        alert('斷線......，請重新進入');
+        location.reload();
     });
 
     /* peer init when client open the page, will receive a peer-id */
@@ -712,7 +704,7 @@ function socketInit() {
 
     /* ---------------------------------------- */
     /* server give all user id: refresh user-id-list */
-    socket.on('all-user-id', (id_arr, name_arr, type) => {
+    socket.on('all-user-id', (id_arr, name_arr) => {
         userid_arr = id_arr;
         username_arr = name_arr;
         document.getElementById("number-of-audience").innerText = `成員 : ${userid_arr.length}`;
@@ -749,12 +741,6 @@ function socketInit() {
                 audience.append(container);
             }
         });
-        if (type == 'old' + myid) {
-            console.log('重新廣播');
-            if (myVideoStream) brocastStreaming(myVideoStream);
-            if (myAudioStream) brocastStreaming(myAudioStream);
-            if (myScreenStream) brocastStreaming(myScreenStream);
-        }
     });
 
     /* remove username when somebody left the room */
@@ -767,7 +753,7 @@ function socketInit() {
     /* p2p send stream:
        when new client join the room, also send stream pakage.
     show the username on chatroom when somebody join the room. */
-    socket.on('new-user-id', (userid, username) => {
+    socket.on('new-user-id', (userid) => {
         if (userid != myid) {
             if (myVideoStream) myPeer.call(userid, myVideoStream);
             if (myAudioStream) myPeer.call(userid, myAudioStream);

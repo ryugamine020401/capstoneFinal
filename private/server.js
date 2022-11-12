@@ -243,7 +243,6 @@ server_io = require('socket.io')(server, {
 });
 
 server_io.on('connection', (socket) => {
-    socket.emit('old-client-check');
     /* when somebody disconnect */
     socket.on('disconnect', () => {
         let index = socket_arr.indexOf(socket);
@@ -269,14 +268,14 @@ server_io.on('connection', (socket) => {
         }
     });
     /* when somebody enter main page */
-    socket.on('new-user-request', (userid, username, type) => {
+    socket.on('new-user-request', (userid, username) => {
         if (socket_arr.indexOf(socket) == -1) {
             socket_arr = [...socket_arr, socket];
             userid_arr = [...userid_arr, userid];
             username_arr = [...username_arr, username];
             yt_arr = [...yt_arr, socket];
-            server_io.emit('new-user-id', userid, username);
-            server_io.emit('all-user-id', userid_arr, username_arr, type+userid);
+            server_io.emit('new-user-id', userid);
+            server_io.emit('all-user-id', userid_arr, username_arr);
             socket.emit('chat-history', chat_history);
             socket.emit('musicroom-refresh', '', get_MusicList());
         }
