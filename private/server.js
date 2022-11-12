@@ -205,7 +205,6 @@ server = https.createServer(options[OPTION_KEY], (request, response) => {
         case '/js/main.js':
         case '/media/icon/mic-off.png':
         case '/media/icon/mic-on.png':
-        case '/media/icon/mic-speaking.png':
             fs.readFile(parent + path, (error, data) => {
                 if (error) {
                     response.writeHead(404);
