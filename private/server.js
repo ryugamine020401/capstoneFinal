@@ -259,7 +259,7 @@ server_io.on('connection', (socket) => {
             /* update clients data */
             server_io.emit('all-user-id', userid_arr, username_arr);
             server_io.emit('someone-left', leaveid);
-            server_io.emit('close-video' + leaveid, 'leave');
+            server_io.emit('close-video-all' + leaveid);
             server_io.emit('close-audio' + leaveid);
             /* clear chatroom if nobody online */
             if (!socket_arr[0]) {
@@ -318,8 +318,8 @@ server_io.on('connection', (socket) => {
 
     /* ---------------------------------------- */
     /* somebody stop capture */
-    socket.on('stop-videoStream', (userid, streamId) => {
-        server_io.emit('close-video' + userid, streamId);
+    socket.on('stop-videoStream', (userid, streamId, other) => {
+        server_io.emit('close-video' + userid + streamId, other);
     });
     socket.on('stop-audioStream', (userid) => {
         server_io.emit('close-audio' + userid);

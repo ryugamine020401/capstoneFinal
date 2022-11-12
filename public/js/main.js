@@ -132,47 +132,55 @@ function brocastStreaming(stream) {
 function listenStreaming() {
     myPeer.on('call', (call) => {
         call.answer(null);
-        let container = document.createElement('div');
-        let video = document.createElement('video');
-        let audio = document.createElement('audio');
-        let videoName = document.createElement('div');
-        video.muted = mutedState;
-        audio.muted = mutedState;
-        /* ---------------------------------------- */
         call.on('stream', (remoteStream) => {
             if (remoteStream) {
+                /* ---------------------------------------- */
+                let container = document.createElement('div');
+                let video = document.createElement('video');
+                let audio = document.createElement('audio');
+                let videoName = document.createElement('div');
+                video.muted = mutedState;
+                audio.muted = mutedState;
+                /* ---------------------------------------- */
                 let type;
                 let username = username_arr[userid_arr.indexOf(call.peer)];
-                try { type = remoteStream.getTracks()[1]['kind']; }
-                catch { type = remoteStream.getTracks()[0]['kind']; }
+                try { type = remoteStream.getTracks()[1].kind; }
+                catch { type = remoteStream.getTracks()[0].kind; }
+                /* ---------------------------------------- */
                 if (type == 'video') {
-                    add_newVideo(container, video, remoteStream, videoName, username, remoteStream.id);
-                    video_arrange();
-                    video_arr = [video, ...video_arr];
+                    let done = add_newVideo(container, video, remoteStream, videoName, username, remoteStream.id);
+                    if (done) {
+                        video_arrange();
+                        video_arr = [video, ...video_arr];
+                        socket.once('close-video' + call.peer + remoteStream.id, (other) => {
+                            console.log(`${username} : close video`);
+                            let video = document.getElementById('video-' + remoteStream.id);
+                            if (video) {
+                                video.remove();
+                                video_arrange();
+                                if (!other) socket.off('close-video-all' + call.peer);
+                            }
+                        });
+                        socket.once('close-video-all' + call.peer, () => {
+                            console.log(`${username} : close video`);
+                            container.remove();
+                            video_arrange();
+                            socket.off('close-video' + call.peer + remoteStream.id);
+                        });
+                    }
+                /* ---------------------------------------- */
                 } else if (type == 'audio') {
                     add_newAudio(audio, remoteStream, call.peer);
                     set_MicIcon(remoteStream, call.peer);
                     audio_arr = [audio, ...audio_arr];
+                    socket.once('close-audio' + call.peer, () => {
+                        console.log(`${username} : close audio`);
+                        audio.remove();
+                    });
                 }
+                /* ---------------------------------------- */
             }
         });
-        /* ---------------------------------------- */
-        socket.once('close-video' + call.peer, (streamId) => {
-            if (streamId != 'leave') {
-                let video = document.getElementById('video-' + streamId);
-                if (video) {
-                    video.remove();
-                    video_arrange();
-                }
-            } else {
-                container.remove();
-                video_arrange();
-            }
-        });
-        socket.once('close-audio' + call.peer, () => {
-            audio.remove();
-        });
-        /* ---------------------------------------- */
     });
 }
 
@@ -212,7 +220,7 @@ function set_MicIcon(stream, userid) {
 function add_newVideo(container, video, videoStream, videoName, username, streamId) {
     let videoBox = document.getElementById("videoBox");
     let exist = document.getElementById('video-' + streamId);
-    if (exist) return;
+    if (exist) return false;
     /* container */
     container.className = 'video-container';
     container.id = 'video-' + streamId;
@@ -257,6 +265,7 @@ function add_newVideo(container, video, videoStream, videoName, username, stream
     container.append(video);
     container.append(videoName);
     videoBox.append(container);
+    return true;
 }
 
 /* creat <audio> tag in DOM */
@@ -340,7 +349,7 @@ async function toggleCamera() {
             myVideoStream.getTracks().forEach((track) => {track.stop();});
             myVideoContainer.remove();
             video_arrange();
-            socket.emit('stop-videoStream', myid, myVideoStream.id);
+            socket.emit('stop-videoStream', myid, myVideoStream.id, myScreenStream!=null);
             myVideoStream = null;
         }
         cameraStatus = false;
@@ -391,7 +400,7 @@ async function toggleScreen() {
                 myScreenStream.getTracks().forEach((track) => {track.stop();});
                 myScreenContainer.remove();
                 video_arrange();
-                socket.emit('stop-videoStream', myid, myScreenStream.id);
+                socket.emit('stop-videoStream', myid, myScreenStream.id, myVideoStream!=null);
                 myScreenStream = null;
                 screenStatus = false;
                 document.getElementById("screen-toggle").innerText = "開啟畫面分享";
@@ -403,7 +412,7 @@ async function toggleScreen() {
             myScreenStream.getTracks().forEach((track) => {track.stop();});
             myScreenContainer.remove();
             video_arrange();
-            socket.emit('stop-videoStream', myid, myScreenStream.id);
+            socket.emit('stop-videoStream', myid, myScreenStream.id, myVideoStream!=null);
             myScreenStream = null;
         }
         screenStatus = false;
