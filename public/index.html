@@ -27,6 +27,9 @@
             cursor: default;
         }
         button:hover,
+        .tags-menu2:hover,
+        #level-tag:hover,
+        #member-tag:hover,
         .tags-menu:hover,
         #chat-tag:hover,
         #music-tag:hover,
@@ -257,6 +260,21 @@
             margin: 1px;
         }
         /* ------------------------------ */
+        .tags-menu2 {
+            overflow: hidden;
+            margin-top: 15px;
+            margin-bottom: 5px;
+            margin-left: 10px;
+            margin-right: 10px;
+        }
+        #member-tag {
+            padding: 5px;
+            color: #eeeeee;
+        }
+        #level-tag {
+            padding: 5px;
+            color: #555555;
+        }
         .audience-constrain {
             flex: 1;
             height: 0;
@@ -270,6 +288,19 @@
         #audience {
             display: flex;
             flex-direction: column;
+        }
+        #audience-request {
+            display: none;
+            /* display: flex; */
+            flex-direction: column;
+        }
+        .audience-request-container {
+            margin: 10px;
+            display: flex;
+            flex-direction: row;
+            justify-content: flex-start;
+            align-items: center;
+            overflow: hidden;
         }
         .audience-container {
             margin-top: 10px;
@@ -421,9 +452,13 @@
                 </div>
             </div>
             <div class="audienceArea">
-                <h3 id="member-tag" style="margin: 7px">成員</h3>
+                <h3 class="tags-menu2">
+                    <span id="member-tag">成員</span>
+                    <span id="level-tag">權限控制</span>
+                </h3>
                 <div class="audience-constrain">
                     <div id="audience"></div>
+                    <div id="audience-request"></div>
                 </div>
                 <div id="audioBox"></div>
             </div>

@@ -210,6 +210,7 @@ server = https.createServer(options[OPTION_KEY], (request, response) => {
         case '/js/main.js':
         case '/media/icon/mic-off.png':
         case '/media/icon/mic-on.png':
+        case '/media/icon/earphone.png':
             fs.readFile(parent + path, (error, data) => {
                 if (error) {
                     response.writeHead(404);
@@ -266,9 +267,12 @@ server_io.on('connection', (socket) => {
             username_arr.splice(index, 1);
             index = yt_arr.indexOf(socket);
             if (index != -1) yt_arr.splice(index, 1);
+            index = speaker_arr.indexOf(leaveid);
+            if (index != -1) speaker_arr.splice(index, 1);
             /* update clients data */
-            server_io.emit('all-user-id', userid_arr, username_arr);
-            server_io.emit('someone-left', leaveid);
+            server_io.emit('speaker-refresh', speaker_arr, null);
+            server_io.emit('all-user-id', userid_arr, username_arr, null);
+            server_io.emit('someone-left', leaveid, (masterid == null));
             server_io.emit('close-video-all' + leaveid);
             server_io.emit('close-audio' + leaveid);
             /* clear chatroom if nobody online */
@@ -289,10 +293,12 @@ server_io.on('connection', (socket) => {
             userid_arr = [...userid_arr, userid];
             username_arr = [...username_arr, username];
             yt_arr = [...yt_arr, socket];
+            server_io.emit('first-speaker', speaker_arr);
             server_io.emit('new-user-id', userid);
             server_io.emit('all-user-id', userid_arr, username_arr, masterid);
             socket.emit('chat-history', chat_history);
             socket.emit('musicroom-refresh', '', get_MusicList());
+            server_io.emit('speaker-refresh', speaker_arr, null);
         }
     });
     /* somebody send a message in chatroom */
@@ -341,13 +347,18 @@ server_io.on('connection', (socket) => {
     
     /* ---------------------------------------- */
     socket.on('share-request', (userid) => {
-        master.emit('share-request', userid);
+        if (master) master.emit('share-request', userid);
     });
     socket.on('request-result', (userid, result) => { 
         let socket2 = socket_arr[userid_arr.indexOf(userid)];
-        if (result) {
+        if (result == true || result == '授權') {
             speaker_arr = [...speaker_arr, userid];
-            server_io.emit('speaker-refresh', speaker_arr);
+            server_io.emit('speaker-refresh', speaker_arr, null);
+        } else if (result == '收回') {
+            let index = speaker_arr.indexOf(userid);
+            let taken = (index != -1)? speaker_arr[index]: null;
+            if (index != -1) speaker_arr.splice(index, 1);
+            server_io.emit('speaker-refresh', speaker_arr, taken);
         }
         socket2.emit('request-result', result);
     });

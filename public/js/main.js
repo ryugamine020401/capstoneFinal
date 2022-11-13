@@ -42,6 +42,7 @@ const SCREEN_QUALITY = {
 
 const MIC_ON_URL = 'media/icon/mic-on.png';
 const MIC_OFF_URL = 'media/icon/mic-off.png';
+const EARPHONE_URL = 'media/icon/earphone.png';
 
 /* ---------------------------------------- */
 let masterid = null;
@@ -191,8 +192,8 @@ function listenStreaming() {
 /* ###################################################################### */
 function set_MicIcon(stream, userid) {
     let lastSpeak = false;
-    let icon = document.getElementById('mic-' + userid);
     let container = document.getElementById('audience-container-' + userid);
+    let icon = container.querySelector('.mic-icon');
     if (icon) icon.src = MIC_ON_URL;
     let audioContext = new (window.AudioContext || window.webkitAudioContext);
     let mediaStreamSource = audioContext.createMediaStreamSource(stream);
@@ -214,7 +215,9 @@ function set_MicIcon(stream, userid) {
     socket.once('close-audio' + userid, () => {
         mediaStreamSource.disconnect();
         scriptProcessor.disconnect();
-        if (icon) icon.src = MIC_OFF_URL;
+        if (icon) {
+            icon.src = (speaker_arr.indexOf(userid) == -1)? EARPHONE_URL: MIC_OFF_URL;
+        }
         if (container) container.style.color = '#eeeeee';
     });
 }
@@ -525,7 +528,35 @@ function change_Volume(object, volume) {
 }
 
 /* ###################################################################### */
+function append_memberRequest(userid, i, order) {
+    let mochi;
+    if (order == 1 || order == 2) return;
+    else if (order == 3) mochi = true;
+    else if (order == 4) mochi = false;
+    mochi = (speaker_arr.indexOf(userid) == -1)? mochi: true;
+    let request = document.getElementById("audience-request");
+    let container = document.createElement('div');
+    container.id = 'audience-request-container-' + userid;
+    container.className = 'audience-request-container';
+    let btn = document.createElement('button');
+    let audienceName = document.createElement('div');
+    btn.innerText = (mochi)? '收回': '授權';
+    btn.style.marginRight = '10px';
+    audienceName.innerText = username_arr[i];
+    btn.addEventListener('click', () => {
+        mochi = !mochi;
+        btn.innerText = (mochi)? '收回': '授權';
+        if (mochi) socket.emit('request-result', userid, '授權');
+        else socket.emit('request-result', userid, '收回');
+    });
+    container.append(btn);
+    container.append(audienceName);
+    container.style.order = order;
+    request.append(container);
+}
+
 function append_member(userid, i, order, postfix) {
+    let audience = document.getElementById("audience");
     let container = document.createElement('div');
     let container2 = document.createElement('div');
     container.id = 'audience-container-' + userid;
@@ -533,9 +564,8 @@ function append_member(userid, i, order, postfix) {
     container2.className = 'audience-container2';
     let icon = document.createElement('img');
     let audienceName = document.createElement('div');
-    icon.id = 'mic-' + userid;
     icon.className = 'mic-icon';
-    icon.src = MIC_OFF_URL;
+    icon.src = (postfix == '' || postfix == ' (您)')? EARPHONE_URL: MIC_OFF_URL;
     audienceName.innerText = username_arr[i] + postfix;
     /* ---------------------------------------- */
     icon.style.order = 1;
@@ -552,6 +582,7 @@ function append_member(userid, i, order, postfix) {
             change_Volume(document.getElementById('audio-' + userid), volume);
         }, 0.5);
         container.append(volume_ctrl);
+        if (postfix == '') volume_ctrl.style.display = 'none';
     }
     container.style.order = order;
     audience.append(container);
@@ -583,11 +614,18 @@ function judge_userLevel(userid) {
 }
 
 function become_speaker() {
+    let request_btn_container = document.querySelector('.request_btn-container');
+    let share_btn_container = document.querySelector('.share_btn-container');
     request_btn_container.style.display = 'none';
     share_btn_container.style.display = 'inline';
 }
 
 function lose_speaker() {
+    if (cameraStatus) document.getElementById('camera-toggle').click();
+    if (micStatus) document.getElementById('mic-toggle').click();
+    if (screenStatus) document.getElementById('screen-toggle').click();
+    let request_btn_container = document.querySelector('.request_btn-container');
+    let share_btn_container = document.querySelector('.share_btn-container');
     request_btn_container.style.display = 'inline';
     share_btn_container.style.display = 'none';
 }
@@ -659,6 +697,7 @@ function Init() {
         } else {
             if (myname == '') myname = 'USER';
             document.getElementById("username").innerText = myname;
+            document.getElementById("level-tag").style.display = 'none';
             lose_speaker();
             join('client');
         }
@@ -798,20 +837,26 @@ function socketInit() {
         username_arr = name_arr;
         if (hostid) masterid = hostid;
         document.getElementById("member-tag").innerText = `成員 : ${userid_arr.length}`;
-        let audience = document.getElementById("audience");
         userid_arr.map( (userid, i) => {
+            let result = judge_userLevel(userid);
             if (!document.getElementById('audience-container-' + userid)) {
-                let result = judge_userLevel(userid);
                 append_member(userid, i, result.order, result.postfix);
+            }
+            if (!document.getElementById('audience-request-container-' + userid)) {
+                append_memberRequest(userid, i, result.order);
             }
         });
     });
 
     /* remove username when somebody left the room */
-    socket.on('someone-left', (userid) => {
+    socket.on('someone-left', (userid, master_leave) => {
         if (document.getElementById('audience-container-' + userid)) {
             document.getElementById('audience-container-' + userid).remove();
         }
+        if (document.getElementById('audience-request-container-' + userid)) {
+            document.getElementById('audience-request-container-' + userid).remove();
+        }
+        if (master_leave) masterid = null;
     });
 
     /* p2p send stream:
@@ -865,38 +910,85 @@ function shareRequest_Init() {
             alert('主持人未加入');
         }
     });
+
+    document.getElementById("member-tag").addEventListener('click', () => {
+        document.getElementById("member-tag").style.color = '#eeeeee';
+        document.getElementById("level-tag").style.color = '#555555';
+        document.getElementById("audience").style.display = 'flex';
+        document.getElementById("audience-request").style.display = 'none';
+    });
+    document.getElementById("level-tag").addEventListener('click', () => {
+        document.getElementById("level-tag").style.color = '#eeeeee';
+        document.getElementById("member-tag").style.color = '#555555';
+        document.getElementById("audience-request").style.display = 'flex';
+        document.getElementById("audience").style.display  = 'none';
+    });
     /* ---------------------------------------- */
     /* master only */
     socket.on('share-request', (userid) => {
         let username = username_arr[userid_arr.indexOf(userid)];
-        let result = true;
+        let result = false;
         socket.emit('request-result', userid, result);
     });
+
     /* user only */
     socket.on('request-result', (result) => {
         request_btn.disabled = false;
-        if (result) become_speaker();
-        else alert('請求被拒絕');
+        if (result == true) {
+            become_speaker();
+            alert('請求已接受');
+        } else if (result == '授權') {
+            become_speaker();
+            alert('已給予權限');
+        } else if (result == '收回') {
+            lose_speaker();
+            alert('權限已被收回');
+        } else {
+            lose_speaker();
+            alert('請求被拒絕');
+        }
     });
+
     /* ---------------------------------------- */
-    /* every */
-    socket.on('speaker-refresh', (arr) => {
+    /* everyone */
+    socket.on('first-speaker', (arr) => {
         speaker_arr = arr;
+    });
+
+    /* everyone */
+    socket.on('speaker-refresh', (arr, taken) => {
+        speaker_arr = arr;
+        if (taken) {
+            let result = judge_userLevel(taken);
+            let container_req = document.getElementById('audience-request-container-' + taken);
+            let container = document.getElementById('audience-container-' + taken);
+            let nameTag = container.querySelector('.audience-container2').querySelector('div');
+            let icon = container.querySelector('.mic-icon');
+            let volume_ctrl = container.querySelector('.mic-volume'); 
+            if (container_req) container_req.style.order = result.order;
+            container.style.order = result.order;
+            nameTag.innerText = username_arr[userid_arr.indexOf(taken)] + result.postfix;
+            icon.src = EARPHONE_URL;
+            if (volume_ctrl) volume_ctrl.style.display = 'none';
+        }
         speaker_arr.map( (userid) => {
-            let obj = document.getElementById('audience-container-' + userid);
-            let nameTag = obj.querySelector('.audience-container2').querySelector('div');
             let result = judge_userLevel(userid);
-            obj.style.order = result.order;
+            let container_req = document.getElementById('audience-request-container-' + userid);
+            let container = document.getElementById('audience-container-' + userid);
+            let nameTag = container.querySelector('.audience-container2').querySelector('div');
+            let icon = container.querySelector('.mic-icon');
+            let volume_ctrl = container.querySelector('.mic-volume'); 
+            if (container_req) container_req.style.order = result.order;
+            container.style.order = result.order;
             nameTag.innerText = username_arr[userid_arr.indexOf(userid)] + result.postfix;
+            icon.src = MIC_OFF_URL;
+            if (volume_ctrl) volume_ctrl.style.display = 'inline';
         });
     });
-    /* ---------------------------------------- */
+
 }
 
 /* ###################################################################### */
-let share_btn_container = document.querySelector('.share_btn-container');
-let request_btn_container = document.querySelector('.request_btn-container');
-
 Init();
 socketInit();
 loginBtn_Init();
