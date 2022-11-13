@@ -4,6 +4,7 @@ const SERVER_HOST = process.env.SERVER_HOST;
 const SERVER_PORT = process.env.SERVER_PORT;
 const PEER_PORT = process.env.PEER_PORT;
 const OPTION_KEY = process.env.OPTION_KEY;
+const HOST_PASSWORD = process.env.HOST_PASSWORD;
 
 let https = require('https');
 let url = require('url');
@@ -33,6 +34,10 @@ let myPeerServer = PeerServer({
 /* ---------------------------------------- */
 let server;
 let server_io;
+
+let master = null;
+let masterid = null;
+let speaker_arr = [];
 
 let userid_arr = [];
 let username_arr = [];
@@ -239,12 +244,22 @@ server = https.createServer(options[OPTION_KEY], (request, response) => {
 server_io = require('socket.io')(server);
 
 server_io.on('connection', (socket) => {
+    /* when somebody want to be the host */
+    socket.on('check-password', (password) => {
+        let result = 'already';
+        if (!master) result = (HOST_PASSWORD == password);
+        socket.emit('password-result', result);
+    });
     /* when somebody disconnect */
     socket.on('disconnect', () => {
         let index = socket_arr.indexOf(socket);
         if (index != -1) {
             /* find the left one from arr */
             let leaveid =  userid_arr[index];
+            if (leaveid == masterid) {
+                master = null;
+                masterid = null;
+            }
             /* remove the left one in arr */
             socket_arr.splice(index, 1);
             userid_arr.splice(index, 1);
@@ -264,14 +279,18 @@ server_io.on('connection', (socket) => {
         }
     });
     /* when somebody enter main page */
-    socket.on('new-user-request', (userid, username) => {
+    socket.on('new-user-request', (userid, username, level) => {
         if (socket_arr.indexOf(socket) == -1) {
+            if (level == 'host') {
+                master = socket;
+                masterid = userid;
+            }
             socket_arr = [...socket_arr, socket];
             userid_arr = [...userid_arr, userid];
             username_arr = [...username_arr, username];
             yt_arr = [...yt_arr, socket];
             server_io.emit('new-user-id', userid);
-            server_io.emit('all-user-id', userid_arr, username_arr);
+            server_io.emit('all-user-id', userid_arr, username_arr, masterid);
             socket.emit('chat-history', chat_history);
             socket.emit('musicroom-refresh', '', get_MusicList());
         }
@@ -320,6 +339,19 @@ server_io.on('connection', (socket) => {
         server_io.emit('close-audio' + userid);
     });
     
+    /* ---------------------------------------- */
+    socket.on('share-request', (userid) => {
+        master.emit('share-request', userid);
+    });
+    socket.on('request-result', (userid, result) => { 
+        let socket2 = socket_arr[userid_arr.indexOf(userid)];
+        if (result) {
+            speaker_arr = [...speaker_arr, userid];
+            server_io.emit('speaker-refresh', speaker_arr);
+        }
+        socket2.emit('request-result', result);
+    });
+
 });
 
 /* ###################################################################### */

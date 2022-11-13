@@ -44,6 +44,9 @@ const MIC_ON_URL = 'media/icon/mic-on.png';
 const MIC_OFF_URL = 'media/icon/mic-off.png';
 
 /* ---------------------------------------- */
+let masterid = null;
+let speaker_arr = [];
+
 let myname;
 let myid;
 let userid_arr = [];
@@ -330,6 +333,7 @@ function add_ytAudio(audio, src, time, loop, pause) {
 /* button onclick event:
    open/close camera and control streaming... */
 async function toggleCamera() {
+    if (sortStatus) document.getElementById("video-sort").click();
     if (cameraStatus == false) {
         myVideoStream = await navigator.mediaDevices.getUserMedia(VIDEO_QUALITY)
         .catch( (error) => {alert(error.message);} );
@@ -383,6 +387,7 @@ async function toggleMic() {
 /* button onclick event:
    open/close screen sharing and control streaming... */
 async function toggleScreen() {
+    if (sortStatus) document.getElementById("video-sort").click();
     if (screenStatus == false) {
         myScreenStream = await navigator.mediaDevices.getDisplayMedia(SCREEN_QUALITY)
         .catch( (error) => {console.log(error.message);} );
@@ -520,8 +525,76 @@ function change_Volume(object, volume) {
 }
 
 /* ###################################################################### */
+function append_member(userid, i, order, postfix) {
+    let container = document.createElement('div');
+    let container2 = document.createElement('div');
+    container.id = 'audience-container-' + userid;
+    container.className = 'audience-container';
+    container2.className = 'audience-container2';
+    let icon = document.createElement('img');
+    let audienceName = document.createElement('div');
+    icon.id = 'mic-' + userid;
+    icon.className = 'mic-icon';
+    icon.src = MIC_OFF_URL;
+    audienceName.innerText = username_arr[i] + postfix;
+    /* ---------------------------------------- */
+    icon.style.order = 1;
+    audienceName.style.order = 2;
+    container2.append(icon);
+    container2.append(audienceName);
+    container.append(container2);
+    /* ---------------------------------------- */
+    if (userid != myid) {
+        let volume_ctrl = document.createElement('input');
+        volume_ctrl.type = 'range';
+        volume_ctrl.className = 'mic-volume';
+        add_RangeDetectEvent(volume_ctrl, (volume) => {
+            change_Volume(document.getElementById('audio-' + userid), volume);
+        }, 0.5);
+        container.append(volume_ctrl);
+    }
+    container.style.order = order;
+    audience.append(container);
+}
+
+function judge_userLevel(userid) {
+    let self = (userid == myid)? true: false;
+    let hoster = (userid == masterid)? true: false;
+    let speaker = (speaker_arr.indexOf(userid) != -1)? true: false;
+    if (self) {
+        order = 1;
+        if (hoster) postfix = ' (主持人) (您)';
+        else if (speaker) postfix = ' (說話者) (您)';
+        else postfix = ' (您)';
+    } else if (hoster) {
+        order = 2;
+        postfix = ' (主持人)';
+    } else if (speaker) {
+        order = 3;
+        postfix = ' (說話者)';
+    } else {
+        order = 4;
+        postfix = '';
+    }
+    return {
+        'order': order,
+        'postfix': postfix
+    };
+}
+
+function become_speaker() {
+    request_btn_container.style.display = 'none';
+    share_btn_container.style.display = 'inline';
+}
+
+function lose_speaker() {
+    request_btn_container.style.display = 'inline';
+    share_btn_container.style.display = 'none';
+}
+
+/* ###################################################################### */
 /* remove autoplay limit */
-function join() {
+function join(level) {
     let audio = document.createElement("audio");
     audio.src = "media/sound/join.mp3";
     audio.addEventListener('play', () => {
@@ -529,9 +602,42 @@ function join() {
         document.querySelector('.topArea').style.display = 'block';
         document.querySelector('.mainArea').style.display = 'flex';
         /* send real request to server when audio ended */
-        socket.emit('new-user-request', myid, myname);
+        socket.emit('new-user-request', myid, myname, level);
     });
     audio.play();
+}
+
+function loginBtn_Init() {
+    let host_btn = document.getElementById('host-check');
+    host_btn.addEventListener('click', () => {
+        host_btn.disabled = true;
+        let name_input = document.getElementById("name-input");
+        let login_input = document.getElementById("password");
+        myname = name_input.value;
+        if (myname.length > 15) {
+            host_btn.disabled = false;
+            name_input.value = '';
+            alert('稱呼過長，請重新輸入 (最多15個字)');
+        } else {
+            let password = login_input.value; 
+            socket.once('password-result', (result) => {
+                if (result == false) {
+                    host_btn.disabled = false;
+                    login_input.value = '';
+                    alert('密碼錯誤');
+                } else if (result == true) {
+                    if (myname == '') myname = 'HOST';
+                    document.getElementById("username").innerText = myname;
+                    become_speaker();
+                    join('host');
+                } else if (result == 'already') {
+                    login_input.value = '';
+                    alert('房主已存在');
+                }
+            });
+            socket.emit('check-password', password);
+        }
+    });
 }
 
 function Init() {
@@ -553,7 +659,8 @@ function Init() {
         } else {
             if (myname == '') myname = 'USER';
             document.getElementById("username").innerText = myname;
-            join();
+            lose_speaker();
+            join('client');
         }
     });
 
@@ -686,41 +793,16 @@ function socketInit() {
 
     /* ---------------------------------------- */
     /* server give all user id: refresh user-id-list */
-    socket.on('all-user-id', (id_arr, name_arr) => {
+    socket.on('all-user-id', (id_arr, name_arr, hostid) => {
         userid_arr = id_arr;
         username_arr = name_arr;
-        document.getElementById("number-of-audience").innerText = `成員 : ${userid_arr.length}`;
+        if (hostid) masterid = hostid;
+        document.getElementById("member-tag").innerText = `成員 : ${userid_arr.length}`;
         let audience = document.getElementById("audience");
         userid_arr.map( (userid, i) => {
             if (!document.getElementById('audience-container-' + userid)) {
-                let container = document.createElement('div');
-                container.className = 'audience-container';
-                container.id = 'audience-container-' + userid;
-                let container2 = document.createElement('div');
-                container2.className = 'audience-container2';
-                let icon = document.createElement('img');
-                icon.id = 'mic-' + userid;
-                icon.className = 'mic-icon';
-                icon.src = MIC_OFF_URL;
-                icon.style.order = 1;
-                container2.append(icon);
-                let audienceName = document.createElement('div');
-                audienceName.innerText = (userid==myid)? username_arr[i]+' (您)': username_arr[i];
-                audienceName.style.order = 2;
-                container2.append(audienceName);
-                container.append(container2);
-                container.style.order = 1;
-                if (userid != myid) {
-                    let volume_ctrl = document.createElement('input');
-                    volume_ctrl.type = 'range';
-                    add_RangeDetectEvent(volume_ctrl, (volume) => {
-                        change_Volume(document.getElementById('audio-' + userid), volume);
-                    }, 0.5);
-                    volume_ctrl.className = 'mic-volume';
-                    container.append(volume_ctrl);
-                    container.style.order = 2;
-                }
-                audience.append(container);
+                let result = judge_userLevel(userid);
+                append_member(userid, i, result.order, result.postfix);
             }
         });
     });
@@ -773,7 +855,50 @@ function socketInit() {
 
 }
 
+function shareRequest_Init() {
+    let request_btn = document.getElementById("request_btn");
+    request_btn.addEventListener('click', () => {
+        if (masterid) {
+            socket.emit('share-request', myid);
+            request_btn.disabled = true;
+        } else {
+            alert('主持人未加入');
+        }
+    });
+    /* ---------------------------------------- */
+    /* master only */
+    socket.on('share-request', (userid) => {
+        let username = username_arr[userid_arr.indexOf(userid)];
+        let result = true;
+        socket.emit('request-result', userid, result);
+    });
+    /* user only */
+    socket.on('request-result', (result) => {
+        request_btn.disabled = false;
+        if (result) become_speaker();
+        else alert('請求被拒絕');
+    });
+    /* ---------------------------------------- */
+    /* every */
+    socket.on('speaker-refresh', (arr) => {
+        speaker_arr = arr;
+        speaker_arr.map( (userid) => {
+            let obj = document.getElementById('audience-container-' + userid);
+            let nameTag = obj.querySelector('.audience-container2').querySelector('div');
+            let result = judge_userLevel(userid);
+            obj.style.order = result.order;
+            nameTag.innerText = username_arr[userid_arr.indexOf(userid)] + result.postfix;
+        });
+    });
+    /* ---------------------------------------- */
+}
+
 /* ###################################################################### */
+let share_btn_container = document.querySelector('.share_btn-container');
+let request_btn_container = document.querySelector('.request_btn-container');
+
 Init();
 socketInit();
+loginBtn_Init();
+shareRequest_Init();
 listenStreaming();

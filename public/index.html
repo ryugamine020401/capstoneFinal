@@ -34,6 +34,7 @@
             cursor: pointer;
         }
         textarea:hover,
+        #password:hover,
         #name-input:hover {
             cursor: text;
         }
@@ -55,7 +56,7 @@
         /* ------------------------------ */
         .confirmArea {
             width: 40vw;
-            height: 10vh;
+            height: 20vh;
             position: fixed;
             top: 0;
             bottom: 0;
@@ -63,8 +64,16 @@
             right: 0;
             margin: auto;
             display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .confirm {
+            height: 50%;
+            width: 100%;
+            display: flex;
             flex-direction: row;
         }
+        #password,
         #name-input {
             flex: 8;
             margin: 20px;
@@ -75,6 +84,7 @@
             border-color: #eeeeee;
             border-style: solid;
         }
+        #host-check,
         #join-check {
             flex: 2;
             margin: 20px;
@@ -275,6 +285,8 @@
             order: 1;
             display: flex;
             flex-direction: row;
+            word-break: break-all;
+            word-wrap: break-word;
             justify-content: flex-start;
             align-items: center;
             overflow: hidden;
@@ -348,26 +360,37 @@
 <body>
     <!-- ###################################################################### -->
     <div class="confirmArea">
-        <input id="name-input" placeholder="輸入暱稱: 最多15個字 (預設USER)">
-        <button id="join-check">進入</button>
+        <div class="confirm">
+            <input id="name-input" placeholder="請輸入暱稱 (最多15個字)">
+            <button id="join-check">聽眾加入</button>
+        </div>
+        <div class="confirm">
+            <input id="password" placeholder="主持人請輸入密碼" type="password">
+            <button id="host-check">主持人加入</button>
+        </div>
     </div>
     <div class="topArea">
-        <h2 id="username">
-            USER
-        </h2>
+        <h2 id="username">USER</h2>
         <div class="btn_ctrl">
-            <input type="checkbox" id="muted-toggle">
-            <span>全部靜音</span>
-            <button id="camera-toggle">開啟相機</button>
-            <button id="mic-toggle">開啟麥克風</button>
-            <button id="screen-toggle">開啟畫面分享</button>
-            <select id="video-layout">
-                <option value="auto" selected>自動排版</option>
-                <option value="type1">排版 1</option>
-                <option value="type2">排版 2</option>
-                <option value="type3">排版 3</option>
-            </select>
-            <button id="video-sort">更改順序</button>
+            <span class="user_btn-container">
+                <input type="checkbox" id="muted-toggle">
+                <span>全部靜音</span>
+                <select id="video-layout">
+                    <option value="auto" selected>自動排版</option>
+                    <option value="type1">排版 1</option>
+                    <option value="type2">排版 2</option>
+                    <option value="type3">排版 3</option>
+                </select>
+                <button id="video-sort">更改順序</button>
+            </span>
+            <span class="share_btn-container">
+                <button id="camera-toggle">開啟相機</button>
+                <button id="mic-toggle">開啟麥克風</button>
+                <button id="screen-toggle">開啟畫面分享</button>
+            </span>
+            <span class="request_btn-container">
+                <button id="request_btn">請求成為說話者</button>
+            </span>
         </div>
     </div>
     <div class="mainArea">
@@ -398,7 +421,7 @@
                 </div>
             </div>
             <div class="audienceArea">
-                <h3 id="number-of-audience" style="margin: 7px">成員</h3>
+                <h3 id="member-tag" style="margin: 7px">成員</h3>
                 <div class="audience-constrain">
                     <div id="audience"></div>
                 </div>
