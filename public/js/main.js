@@ -541,11 +541,14 @@ function append_memberRequest(userid, i, order) {
     let btn = document.createElement('button');
     let audienceName = document.createElement('div');
     btn.innerText = (mochi)? '收回': '授權';
+    btn.style.background = (mochi)? 'red': 'green';
+    btn.style.opacity = 0.9;
     btn.style.marginRight = '10px';
     audienceName.innerText = username_arr[i];
     btn.addEventListener('click', () => {
         mochi = !mochi;
         btn.innerText = (mochi)? '收回': '授權';
+        btn.style.background = (mochi)? 'red': 'green';
         if (mochi) socket.emit('request-result', userid, '授權');
         else socket.emit('request-result', userid, '收回');
     });
