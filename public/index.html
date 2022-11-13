@@ -28,6 +28,7 @@
         }
         button:hover,
         .tags-menu2:hover,
+        #request-tag:hover,
         #level-tag:hover,
         #member-tag:hover,
         .tags-menu:hover,
@@ -271,6 +272,7 @@
             padding: 5px;
             color: #eeeeee;
         }
+        #request-tag,
         #level-tag {
             padding: 5px;
             color: #555555;
@@ -289,6 +291,7 @@
             display: flex;
             flex-direction: column;
         }
+        #audience-request-response,
         #audience-request {
             display: none;
             /* display: flex; */
@@ -455,10 +458,12 @@
                 <h3 class="tags-menu2">
                     <span id="member-tag">成員</span>
                     <span id="level-tag">權限控制</span>
+                    <span id="request-tag">權限請求</span>
                 </h3>
                 <div class="audience-constrain">
                     <div id="audience"></div>
                     <div id="audience-request"></div>
+                    <div id="audience-request-response"></div>
                 </div>
                 <div id="audioBox"></div>
             </div>

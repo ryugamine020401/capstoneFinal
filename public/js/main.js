@@ -546,10 +546,12 @@ function append_memberRequest(userid, i, order) {
     btn.style.marginRight = '10px';
     audienceName.innerText = username_arr[i];
     btn.addEventListener('click', () => {
-        mochi = !mochi;
-        btn.innerText = (mochi)? '收回': '授權';
-        btn.style.background = (mochi)? 'red': 'green';
-        if (mochi) socket.emit('request-result', userid, '授權');
+        let another = document.getElementById('audience-request-container2-' + userid);
+        if (another) another.remove();
+        // mochi = !mochi;
+        btn.innerText = (btn.innerText == '授權')? '收回': '授權';
+        btn.style.background = (btn.innerText == '收回')? 'red': 'green';
+        if (btn.innerText == '收回') socket.emit('request-result', userid, '授權');
         else socket.emit('request-result', userid, '收回');
     });
     container.append(btn);
@@ -633,6 +635,39 @@ function lose_speaker() {
     share_btn_container.style.display = 'none';
 }
 
+function append_memberRequest2(username, userid, socket) {
+    let req_res = document.getElementById("audience-request-response");
+    let container = document.createElement('div');
+    container.id = 'audience-request-container2-' + userid;
+    container.className = 'audience-request-container';
+    let accept_btn = document.createElement('button');
+    let reject_btn = document.createElement('button');
+    let audienceName = document.createElement('div');
+    accept_btn.innerText = '允許';
+    reject_btn.innerText = '拒絕';
+    accept_btn.style.marginRight = '10px';
+    reject_btn.style.marginRight = '10px';
+    audienceName.innerText = username;
+    accept_btn.addEventListener('click', () => {
+        let another = document.getElementById('audience-request-container-' + userid);
+        if (another) {
+            let btn = another.querySelector('button');
+            btn.innerText = '收回';
+            btn.style.background = 'red';
+        }
+        container.remove();
+        socket.emit('request-result', userid, true);
+    });
+    reject_btn.addEventListener('click', () => {
+        container.remove();
+        socket.emit('request-result', userid, false);
+    });
+    container.append(accept_btn);
+    container.append(reject_btn);
+    container.append(audienceName);
+    req_res.append(container);
+}
+
 /* ###################################################################### */
 /* remove autoplay limit */
 function join(level) {
@@ -701,6 +736,7 @@ function Init() {
             if (myname == '') myname = 'USER';
             document.getElementById("username").innerText = myname;
             document.getElementById("level-tag").style.display = 'none';
+            document.getElementById("request-tag").style.display = 'none';
             lose_speaker();
             join('client');
         }
@@ -859,7 +895,13 @@ function socketInit() {
         if (document.getElementById('audience-request-container-' + userid)) {
             document.getElementById('audience-request-container-' + userid).remove();
         }
-        if (master_leave) masterid = null;
+        if (document.getElementById('audience-request-container2-' + userid)) {
+            document.getElementById('audience-request-container2-' + userid).remove();
+        }
+        if (master_leave) {
+            masterid = null;
+            document.getElementById("request_btn").disabled = false;
+        }
     });
 
     /* p2p send stream:
@@ -917,21 +959,34 @@ function shareRequest_Init() {
     document.getElementById("member-tag").addEventListener('click', () => {
         document.getElementById("member-tag").style.color = '#eeeeee';
         document.getElementById("level-tag").style.color = '#555555';
+        document.getElementById("request-tag").style.color = '#555555';
         document.getElementById("audience").style.display = 'flex';
         document.getElementById("audience-request").style.display = 'none';
+        document.getElementById("audience-request-response").style.display = 'none';
     });
     document.getElementById("level-tag").addEventListener('click', () => {
-        document.getElementById("level-tag").style.color = '#eeeeee';
         document.getElementById("member-tag").style.color = '#555555';
-        document.getElementById("audience-request").style.display = 'flex';
+        document.getElementById("level-tag").style.color = '#eeeeee';
+        document.getElementById("request-tag").style.color = '#555555';
         document.getElementById("audience").style.display  = 'none';
+        document.getElementById("audience-request").style.display = 'flex';
+        document.getElementById("audience-request-response").style.display = 'none';
+    });
+    document.getElementById("request-tag").addEventListener('click', () => {
+        document.getElementById("member-tag").style.color = '#555555';
+        document.getElementById("level-tag").style.color = '#555555';
+        document.getElementById("request-tag").style.color = '#eeeeee';
+        document.getElementById("audience").style.display  = 'none';
+        document.getElementById("audience-request").style.display = 'none';
+        document.getElementById("audience-request-response").style.display = 'flex';
     });
     /* ---------------------------------------- */
     /* master only */
     socket.on('share-request', (userid) => {
         let username = username_arr[userid_arr.indexOf(userid)];
-        let result = false;
-        socket.emit('request-result', userid, result);
+        append_memberRequest2(username, userid, socket);
+        document.getElementById("request-tag").style.color = 'green';
+        alert(`${username} 請求成為說話者`);
     });
 
     /* user only */
