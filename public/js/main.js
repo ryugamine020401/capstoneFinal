@@ -1007,8 +1007,8 @@ function shareRequest_Init() {
     socket.on('share-request', (userid) => {
         let username = username_arr[userid_arr.indexOf(userid)];
         append_memberRequest2(username, userid, socket);
-        document.getElementById("request-tag").style.color = 'green';
         alert(`${username} 請求成為說話者`);
+        document.getElementById('request-tag').click();
     });
 
     /* user only */
