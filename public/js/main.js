@@ -11,14 +11,29 @@ let myPeer = new Peer(undefined, {
 const VIDEO_QUALITY = {
     audio: false,
     video: {
-        width: 192, //768,
-        height: 108 //432
+        width: 1280,
+        height: 720
     }
 };
 
 const AUDIO_QUALITY = {
-    audio: true,
-    video: false
+    false: {
+        audio: {
+            autoGainControl: false,
+            channelCount: 2,
+            echoCancellation: false,
+            latency: 0,
+            noiseSuppression: false,
+            sampleRate: 48000,
+            sampleSize: 16,
+            volume: 1.0
+        },
+        video: false
+    },
+    true: {
+        audio: true,
+        video: false
+    }
 };
 
 const SCREEN_QUALITY = {
@@ -371,8 +386,9 @@ async function toggleCamera() {
    open/close mic and control streaming... */
 async function toggleMic() {
     set_getOut();
+    let noise = document.getElementById('mic-noise').checked;
     if (micStatus == false) {
-        myAudioStream = await navigator.mediaDevices.getUserMedia(AUDIO_QUALITY)
+        myAudioStream = await navigator.mediaDevices.getUserMedia(AUDIO_QUALITY[noise])
         .catch( (error) => {alert(error.message);} );
         if (myAudioStream) {
             add_newAudio(myAudio, myAudioStream, myid);
@@ -380,6 +396,7 @@ async function toggleMic() {
             brocastStreaming(myAudioStream);
             micStatus = true;
             document.getElementById("mic-toggle").innerText = "關閉麥克風";
+            document.getElementById('mic-noise').disabled = true;
         }
     } else {
         if (myAudioStream) {
@@ -391,6 +408,7 @@ async function toggleMic() {
         }
         micStatus = false;
         document.getElementById("mic-toggle").innerText = "開啟麥克風";
+        document.getElementById('mic-noise').disabled = false;
     }
 }
 
