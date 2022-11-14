@@ -216,7 +216,9 @@ function set_MicIcon(stream, userid) {
         mediaStreamSource.disconnect();
         scriptProcessor.disconnect();
         if (icon) {
-            icon.src = (speaker_arr.indexOf(userid) == -1)? EARPHONE_URL: MIC_OFF_URL;
+            let icon_src = (speaker_arr.indexOf(userid) == -1)? EARPHONE_URL: MIC_OFF_URL;
+            icon_src = (userid == masterid)? MIC_OFF_URL: icon_src;
+            icon.src = icon_src;
         }
         if (container) container.style.color = '#eeeeee';
     });
