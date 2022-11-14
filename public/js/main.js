@@ -156,16 +156,18 @@ function listenStreaming() {
                         video_arrange();
                         video_arr = [video, ...video_arr];
                         socket.once('close-video' + call.peer + remoteStream.id, (other) => {
-                            console.log(`${username} : close video`);
+                            // console.log(`${username} : close video`);
                             let video = document.getElementById('video-' + remoteStream.id);
                             if (video) {
+                                video.querySelector('video').onclick = null;
                                 video.remove();
                                 video_arrange();
                                 if (!other) socket.off('close-video-all' + call.peer);
                             }
                         });
                         socket.once('close-video-all' + call.peer, () => {
-                            console.log(`${username} : close video`);
+                            // console.log(`${username} : close video`);
+                            container.querySelector('video').onclick = null;
                             container.remove();
                             video_arrange();
                             socket.off('close-video' + call.peer + remoteStream.id);
@@ -178,7 +180,7 @@ function listenStreaming() {
                         set_MicIcon(remoteStream, call.peer);
                         audio_arr = [audio, ...audio_arr];
                         socket.once('close-audio' + call.peer, () => {
-                            console.log(`${username} : close audio`);
+                            // console.log(`${username} : close audio`);
                             audio.remove();
                         });
                     }
@@ -247,7 +249,7 @@ function add_newVideo(container, video, videoStream, videoName, username, stream
     video.addEventListener('pause', () => {
         video.play();
     });
-    video.addEventListener('click', () => {
+    video.onclick = () => {
         if (sortStatus) {
             numbering += 1;
             video_container_arr = [...video_container_arr, container];
@@ -268,7 +270,7 @@ function add_newVideo(container, video, videoStream, videoName, username, stream
             });
             container.append(num_div);
         }
-    });
+    };
     /* append */
     container.append(video);
     container.append(videoName);
@@ -339,7 +341,7 @@ function add_ytAudio(audio, src, time, loop, pause) {
    open/close camera and control streaming... */
 async function toggleCamera() {
     set_getOut();
-    if (sortStatus) document.getElementById("video-sort").click();
+    // if (sortStatus) document.getElementById("video-sort").click();
     if (cameraStatus == false) {
         myVideoStream = await navigator.mediaDevices.getUserMedia(VIDEO_QUALITY)
         .catch( (error) => {alert(error.message);} );
@@ -354,6 +356,7 @@ async function toggleCamera() {
         if (myVideoStream) {
             /* stop fetch media */
             myVideoStream.getTracks().forEach((track) => {track.stop();});
+            myVideoContainer.querySelector('video').onclick = null;
             myVideoContainer.remove();
             video_arrange();
             socket.emit('stop-videoStream', myid, myVideoStream.id, myScreenStream!=null);
@@ -395,7 +398,7 @@ async function toggleMic() {
    open/close screen sharing and control streaming... */
 async function toggleScreen() {
     set_getOut();
-    if (sortStatus) document.getElementById("video-sort").click();
+    // if (sortStatus) document.getElementById("video-sort").click();
     if (screenStatus == false) {
         myScreenStream = await navigator.mediaDevices.getDisplayMedia(SCREEN_QUALITY)
         .catch( (error) => {console.log(error.message);} );
@@ -408,6 +411,7 @@ async function toggleScreen() {
             myScreenStream.getVideoTracks()[0].onended = function () {
                 /* stop fetch media */
                 myScreenStream.getTracks().forEach((track) => {track.stop();});
+                myScreenContainer.querySelector('video').onclick = null;
                 myScreenContainer.remove();
                 video_arrange();
                 socket.emit('stop-videoStream', myid, myScreenStream.id, myVideoStream!=null);
@@ -420,6 +424,7 @@ async function toggleScreen() {
         if (myScreenStream) {
             /* stop fetch media */
             myScreenStream.getTracks().forEach((track) => {track.stop();});
+            myScreenContainer.querySelector('video').onclick = null;
             myScreenContainer.remove();
             video_arrange();
             socket.emit('stop-videoStream', myid, myScreenStream.id, myVideoStream!=null);
