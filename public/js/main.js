@@ -11,14 +11,29 @@ let myPeer = new Peer(undefined, {
 const VIDEO_QUALITY = {
     audio: false,
     video: {
-        width: 192, //768,
-        height: 108 //432
+        width: 1280,
+        height: 720
     }
 };
 
 const AUDIO_QUALITY = {
-    audio: true,
-    video: false
+    false: {
+        audio: {
+            autoGainControl: false,
+            channelCount: 2,
+            echoCancellation: false,
+            latency: 0,
+            noiseSuppression: false,
+            sampleRate: 48000,
+            sampleSize: 16,
+            volume: 1.0
+        },
+        video: false
+    },
+    true: {
+        audio: true,
+        video: false
+    }
 };
 
 const SCREEN_QUALITY = {
@@ -156,16 +171,18 @@ function listenStreaming() {
                         video_arrange();
                         video_arr = [video, ...video_arr];
                         socket.once('close-video' + call.peer + remoteStream.id, (other) => {
-                            console.log(`${username} : close video`);
+                            // console.log(`${username} : close video`);
                             let video = document.getElementById('video-' + remoteStream.id);
                             if (video) {
+                                video.querySelector('video').onclick = null;
                                 video.remove();
                                 video_arrange();
                                 if (!other) socket.off('close-video-all' + call.peer);
                             }
                         });
                         socket.once('close-video-all' + call.peer, () => {
-                            console.log(`${username} : close video`);
+                            // console.log(`${username} : close video`);
+                            container.querySelector('video').onclick = null;
                             container.remove();
                             video_arrange();
                             socket.off('close-video' + call.peer + remoteStream.id);
@@ -178,7 +195,7 @@ function listenStreaming() {
                         set_MicIcon(remoteStream, call.peer);
                         audio_arr = [audio, ...audio_arr];
                         socket.once('close-audio' + call.peer, () => {
-                            console.log(`${username} : close audio`);
+                            // console.log(`${username} : close audio`);
                             audio.remove();
                         });
                     }
@@ -216,7 +233,9 @@ function set_MicIcon(stream, userid) {
         mediaStreamSource.disconnect();
         scriptProcessor.disconnect();
         if (icon) {
-            icon.src = (speaker_arr.indexOf(userid) == -1)? EARPHONE_URL: MIC_OFF_URL;
+            let icon_src = (speaker_arr.indexOf(userid) == -1)? EARPHONE_URL: MIC_OFF_URL;
+            icon_src = (userid == masterid)? MIC_OFF_URL: icon_src;
+            icon.src = icon_src;
         }
         if (container) container.style.color = '#eeeeee';
     });
@@ -245,7 +264,7 @@ function add_newVideo(container, video, videoStream, videoName, username, stream
     video.addEventListener('pause', () => {
         video.play();
     });
-    video.addEventListener('click', () => {
+    video.onclick = () => {
         if (sortStatus) {
             numbering += 1;
             video_container_arr = [...video_container_arr, container];
@@ -266,7 +285,7 @@ function add_newVideo(container, video, videoStream, videoName, username, stream
             });
             container.append(num_div);
         }
-    });
+    };
     /* append */
     container.append(video);
     container.append(videoName);
@@ -337,7 +356,7 @@ function add_ytAudio(audio, src, time, loop, pause) {
    open/close camera and control streaming... */
 async function toggleCamera() {
     set_getOut();
-    if (sortStatus) document.getElementById("video-sort").click();
+    // if (sortStatus) document.getElementById("video-sort").click();
     if (cameraStatus == false) {
         myVideoStream = await navigator.mediaDevices.getUserMedia(VIDEO_QUALITY)
         .catch( (error) => {alert(error.message);} );
@@ -352,6 +371,7 @@ async function toggleCamera() {
         if (myVideoStream) {
             /* stop fetch media */
             myVideoStream.getTracks().forEach((track) => {track.stop();});
+            myVideoContainer.querySelector('video').onclick = null;
             myVideoContainer.remove();
             video_arrange();
             socket.emit('stop-videoStream', myid, myVideoStream.id, myScreenStream!=null);
@@ -366,8 +386,9 @@ async function toggleCamera() {
    open/close mic and control streaming... */
 async function toggleMic() {
     set_getOut();
+    let noise = document.getElementById('mic-noise').checked;
     if (micStatus == false) {
-        myAudioStream = await navigator.mediaDevices.getUserMedia(AUDIO_QUALITY)
+        myAudioStream = await navigator.mediaDevices.getUserMedia(AUDIO_QUALITY[noise])
         .catch( (error) => {alert(error.message);} );
         if (myAudioStream) {
             add_newAudio(myAudio, myAudioStream, myid);
@@ -375,6 +396,7 @@ async function toggleMic() {
             brocastStreaming(myAudioStream);
             micStatus = true;
             document.getElementById("mic-toggle").innerText = "關閉麥克風";
+            document.getElementById('mic-noise').disabled = true;
         }
     } else {
         if (myAudioStream) {
@@ -386,6 +408,7 @@ async function toggleMic() {
         }
         micStatus = false;
         document.getElementById("mic-toggle").innerText = "開啟麥克風";
+        document.getElementById('mic-noise').disabled = false;
     }
 }
 
@@ -393,7 +416,7 @@ async function toggleMic() {
    open/close screen sharing and control streaming... */
 async function toggleScreen() {
     set_getOut();
-    if (sortStatus) document.getElementById("video-sort").click();
+    // if (sortStatus) document.getElementById("video-sort").click();
     if (screenStatus == false) {
         myScreenStream = await navigator.mediaDevices.getDisplayMedia(SCREEN_QUALITY)
         .catch( (error) => {console.log(error.message);} );
@@ -406,6 +429,7 @@ async function toggleScreen() {
             myScreenStream.getVideoTracks()[0].onended = function () {
                 /* stop fetch media */
                 myScreenStream.getTracks().forEach((track) => {track.stop();});
+                myScreenContainer.querySelector('video').onclick = null;
                 myScreenContainer.remove();
                 video_arrange();
                 socket.emit('stop-videoStream', myid, myScreenStream.id, myVideoStream!=null);
@@ -418,6 +442,7 @@ async function toggleScreen() {
         if (myScreenStream) {
             /* stop fetch media */
             myScreenStream.getTracks().forEach((track) => {track.stop();});
+            myScreenContainer.querySelector('video').onclick = null;
             myScreenContainer.remove();
             video_arrange();
             socket.emit('stop-videoStream', myid, myScreenStream.id, myVideoStream!=null);
@@ -458,28 +483,28 @@ function sendcommand_to_Server() {
 }
 
 function add_KeypressEvent() {
-    let ShiftRight = false;
+    let Shift = false;
     let Enter = false;
     document.getElementById('command-input').addEventListener('keydown', (e) => {
-        if (e.code == 'ShiftRight') ShiftRight = true;
-        if (e.code = 'Enter') Enter = true;
+        if (e.key == 'Shift') Shift = true;
+        if (e.key = 'Enter') Enter = true;
     });
     document.getElementById('command-input').addEventListener('keyup', (e) => {
-        if (ShiftRight == true && e.code == 'Enter') sendcommand_to_Server();
-        else if (Enter == true && e.code == 'ShiftRight') sendcommand_to_Server();
+        if (Shift == true && e.key == 'Enter') sendcommand_to_Server();
+        else if (Enter == true && e.key == 'Shift') sendcommand_to_Server();
         else if (e.code == 'NumpadEnter') sendcommand_to_Server();
-        ShiftRight = false;
+        Shift = false;
         Enter = false
     });
     document.getElementById('chat-input').addEventListener('keydown', (e) => {
-        if (e.code == 'ShiftRight') ShiftRight = true;
-        if (e.code = 'Enter') Enter = true;
+        if (e.key == 'Shift') Shift = true;
+        if (e.key = 'Enter') Enter = true;
     });
     document.getElementById('chat-input').addEventListener('keyup', (e) => {
-        if (ShiftRight == true && e.code == 'Enter') sendchat_to_Server();
-        else if (Enter == true && e.code == 'ShiftRight') sendchat_to_Server();
+        if (Shift == true && e.key == 'Enter') sendchat_to_Server();
+        else if (Enter == true && e.key == 'Shift') sendchat_to_Server();
         else if (e.code == 'NumpadEnter') sendchat_to_Server();
-        ShiftRight = false;
+        Shift = false;
         Enter = false
     });
 }
@@ -795,6 +820,7 @@ function Init() {
     });
     
     /* muted control event */
+    document.getElementById('mic-noise').checked = true;
     document.getElementById("muted-toggle").addEventListener('click', () => {
         mutedState = document.getElementById("muted-toggle").checked;
         audio_arr.map( (audio) => {
@@ -1007,8 +1033,8 @@ function shareRequest_Init() {
     socket.on('share-request', (userid) => {
         let username = username_arr[userid_arr.indexOf(userid)];
         append_memberRequest2(username, userid, socket);
-        document.getElementById("request-tag").style.color = 'green';
         alert(`${username} 請求成為說話者`);
+        document.getElementById('request-tag').click();
     });
 
     /* user only */
@@ -1029,29 +1055,22 @@ function shareRequest_Init() {
         }
     });
 
-    /* ---------------------------------------- */
     /* everyone */
-    socket.on('first-speaker', (arr) => {
+    socket.on('speaker-refresh', (arr, taken, userid) => {
         speaker_arr = arr;
-    });
-
-    /* everyone */
-    socket.on('speaker-refresh', (arr, taken) => {
-        speaker_arr = arr;
-        if (taken) {
-            let result = judge_userLevel(taken);
-            let container_req = document.getElementById('audience-request-container-' + taken);
-            let container = document.getElementById('audience-container-' + taken);
+        if (taken && userid) {
+            let result = judge_userLevel(userid);
+            let container_req = document.getElementById('audience-request-container-' + userid);
+            let container = document.getElementById('audience-container-' + userid);
             let nameTag = container.querySelector('.audience-container2').querySelector('div');
             let icon = container.querySelector('.mic-icon');
             let volume_ctrl = container.querySelector('.mic-volume'); 
             if (container_req) container_req.style.order = result.order;
             container.style.order = result.order;
-            nameTag.innerText = username_arr[userid_arr.indexOf(taken)] + result.postfix;
+            nameTag.innerText = username_arr[userid_arr.indexOf(userid)] + result.postfix;
             icon.src = EARPHONE_URL;
             if (volume_ctrl) volume_ctrl.style.display = 'none';
-        }
-        speaker_arr.map( (userid) => {
+        } else if (!taken && userid) {
             let result = judge_userLevel(userid);
             let container_req = document.getElementById('audience-request-container-' + userid);
             let container = document.getElementById('audience-container-' + userid);
@@ -1063,7 +1082,7 @@ function shareRequest_Init() {
             nameTag.innerText = username_arr[userid_arr.indexOf(userid)] + result.postfix;
             icon.src = MIC_OFF_URL;
             if (volume_ctrl) volume_ctrl.style.display = 'inline';
-        });
+        }
     });
 
 }

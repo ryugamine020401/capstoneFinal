@@ -105,7 +105,7 @@ function play_nextMusic(socketid) {
 }
 
 /* send command to clients */
-function ctrl_BOT(socket, command) {
+function ctrl_BOT(socket, command, speaker) {
     switch (command) {
         case 'yt':
             socket.emit('musicroom-refresh', socket.id, command_def);
@@ -114,51 +114,75 @@ function ctrl_BOT(socket, command) {
             socket.emit('musicroom-clean');
             return true;
         case 'clear':
-            music_list = [music_list[0]];
-            server_io.emit('musicroom-refresh', socket.id, '--Music Clear--');
+            if (speaker) {
+                music_list = [music_list[0]];
+                server_io.emit('musicroom-refresh', socket.id, '--Music Clear--');
+            } else {
+                socket.emit('musicroom-refresh', socket.id, '--權限不夠--');
+            }
             return true;
         case 'list':
             socket.emit('musicroom-refresh', socket.id, get_MusicList());
             return true;
         case 'pause':
-            if (music_list[0]) {
-                server_io.emit('yt-operate', 'pause');
-                server_io.emit('musicroom-refresh', socket.id, '--Music Pause--');
+            if (speaker) {
+                if (music_list[0]) {
+                    server_io.emit('yt-operate', 'pause');
+                    server_io.emit('musicroom-refresh', socket.id, '--Music Pause--');
+                } else {
+                    socket.emit('musicroom-refresh', socket.id, '--No Music playing--');
+                }
             } else {
-                socket.emit('musicroom-refresh', socket.id, '--No Music playing--');
+                socket.emit('musicroom-refresh', socket.id, '--權限不夠--');
             }
             return true;
         case 'resume':
-            if (music_list[0]) {
-                server_io.emit('yt-operate', 'resume');
-                server_io.emit('musicroom-refresh', socket.id, '--Music Resume--');
+            if (speaker) {
+                if (music_list[0]) {
+                    server_io.emit('yt-operate', 'resume');
+                    server_io.emit('musicroom-refresh', socket.id, '--Music Resume--');
+                } else {
+                    socket.emit('musicroom-refresh', socket.id, '--No Music playing--');
+                }
             } else {
-                socket.emit('musicroom-refresh', socket.id, '--No Music playing--');
+                socket.emit('musicroom-refresh', socket.id, '--權限不夠--');
             }
             return true;
         case 'skip':
-            if (music_list[0]) {
-                server_io.emit('yt-operate', 'skip');
-                server_io.emit('musicroom-refresh', socket.id, '--Music Skip--');
-                play_nextMusic(socket.id);
+            if (speaker) {
+                if (music_list[0]) {
+                    server_io.emit('yt-operate', 'skip');
+                    server_io.emit('musicroom-refresh', socket.id, '--Music Skip--');
+                    play_nextMusic(socket.id);
+                } else {
+                    socket.emit('musicroom-refresh', socket.id, '--No Music playing--');
+                }
             } else {
-                socket.emit('musicroom-refresh', socket.id, '--No Music playing--');
-            }
+                socket.emit('musicroom-refresh', socket.id, '--權限不夠--');
+            } 
             return true;
         case 'loop':
-            if (music_list[0]) {
-                server_io.emit('yt-operate', 'loop');
-                server_io.emit('musicroom-refresh', socket.id, '--Music Loop--');
+            if (speaker) {
+                if (music_list[0]) {
+                    server_io.emit('yt-operate', 'loop');
+                    server_io.emit('musicroom-refresh', socket.id, '--Music Loop--');
+                } else {
+                    socket.emit('musicroom-refresh', socket.id, '--No Music playing--');
+                }
             } else {
-                socket.emit('musicroom-refresh', socket.id, '--No Music playing--');
+                socket.emit('musicroom-refresh', socket.id, '--權限不夠--');
             }
             return true;
         case 'unloop':
-            if (music_list[0]) {
-                server_io.emit('yt-operate', 'unloop');
-                server_io.emit('musicroom-refresh', socket.id, '--Music Unloop--');
+            if (speaker) {
+                if (music_list[0]) {
+                    server_io.emit('yt-operate', 'unloop');
+                    server_io.emit('musicroom-refresh', socket.id, '--Music Unloop--');
+                } else {
+                    socket.emit('musicroom-refresh', socket.id, '--No Music playing--');
+                }
             } else {
-                socket.emit('musicroom-refresh', socket.id, '--No Music playing--');
+                socket.emit('musicroom-refresh', socket.id, '--權限不夠--');
             }
             return true;
     }
@@ -242,7 +266,10 @@ server = https.createServer(options[OPTION_KEY], (request, response) => {
 });
 
 /* ###################################################################### */
-server_io = require('socket.io')(server);
+server_io = require('socket.io')(server, {
+    pingTimeout: 5000,
+    pingInterval: 10000
+});
 
 server_io.on('connection', (socket) => {
     /* when somebody want to be the host */
@@ -270,7 +297,7 @@ server_io.on('connection', (socket) => {
             index = speaker_arr.indexOf(leaveid);
             if (index != -1) speaker_arr.splice(index, 1);
             /* update clients data */
-            server_io.emit('speaker-refresh', speaker_arr, null);
+            server_io.emit('speaker-refresh', speaker_arr, false, null);
             server_io.emit('all-user-id', userid_arr, username_arr, null);
             server_io.emit('someone-left', leaveid, (masterid == null));
             server_io.emit('close-video-all' + leaveid);
@@ -293,12 +320,11 @@ server_io.on('connection', (socket) => {
             userid_arr = [...userid_arr, userid];
             username_arr = [...username_arr, username];
             yt_arr = [...yt_arr, socket];
-            server_io.emit('first-speaker', speaker_arr);
+            server_io.emit('speaker-refresh', speaker_arr, false, null);
             server_io.emit('new-user-id', userid);
             server_io.emit('all-user-id', userid_arr, username_arr, masterid);
             socket.emit('chat-history', chat_history);
             socket.emit('musicroom-refresh', '', get_MusicList());
-            server_io.emit('speaker-refresh', speaker_arr, null);
         }
     });
     /* somebody send a message in chatroom */
@@ -312,13 +338,22 @@ server_io.on('connection', (socket) => {
     /* ---------------------------------------- */
     /* somebody send a message in commandroom */
     socket.on('new-music-command', (message) => {
-        if (socket_arr.indexOf(socket) != -1) {
+        let exist = socket_arr.indexOf(socket) != -1;
+        let index = socket_arr.indexOf(socket);
+        index =  (index != -1)? speaker_arr.indexOf(userid_arr[index]): -1;
+        let speaker = index != -1 || socket == master;
+        if (exist && speaker) {
             let prefix = message.slice(0, 5);
             let URL = message.replace(prefix, '');
             let KEYWORD = message.replace(prefix, '');
             let command = message.replaceAll(' ', '').replaceAll('\n', '');
             if (prefix == 'play ') find_ytStream(socket, URL, KEYWORD);
-            else if (!ctrl_BOT(socket, command)) socket.emit('musicroom-refresh', socket.id, '--Invalid Input--');
+            else if (!ctrl_BOT(socket, command, true)) socket.emit('musicroom-refresh', socket.id, '--Invalid Input--');
+        } else if (exist) {
+            let prefix = message.slice(0, 5);
+            let command = message.replaceAll(' ', '').replaceAll('\n', '');
+            if (prefix == 'play ') socket.emit('musicroom-refresh', socket.id, '--權限不夠--');
+            else if (!ctrl_BOT(socket, command, false)) socket.emit('musicroom-refresh', socket.id, '--Invalid Input--');
         }
     });
     /* when music audio ended */
@@ -358,12 +393,12 @@ server_io.on('connection', (socket) => {
             let socket2 = socket_arr[userid_arr.indexOf(userid)];
             if (result == true || result == '授權') {
                 speaker_arr = [...speaker_arr, userid];
-                server_io.emit('speaker-refresh', speaker_arr, null);
+                server_io.emit('speaker-refresh', speaker_arr, false, userid);
             } else if (result == '收回') {
                 let index = speaker_arr.indexOf(userid);
                 let taken = (index != -1)? speaker_arr[index]: null;
                 if (index != -1) speaker_arr.splice(index, 1);
-                server_io.emit('speaker-refresh', speaker_arr, taken);
+                server_io.emit('speaker-refresh', speaker_arr, true, taken);
             }
             socket2.emit('request-result', result);
         } else {
