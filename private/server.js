@@ -266,7 +266,10 @@ server = https.createServer(options[OPTION_KEY], (request, response) => {
 });
 
 /* ###################################################################### */
-server_io = require('socket.io')(server);
+server_io = require('socket.io')(server, {
+    pingTimeout: 5000,
+    pingInterval: 10000
+});
 
 server_io.on('connection', (socket) => {
     /* when somebody want to be the host */

@@ -820,6 +820,7 @@ function Init() {
     });
     
     /* muted control event */
+    document.getElementById('mic-noise').checked = true;
     document.getElementById("muted-toggle").addEventListener('click', () => {
         mutedState = document.getElementById("muted-toggle").checked;
         audio_arr.map( (audio) => {
