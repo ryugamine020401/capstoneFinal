@@ -336,6 +336,7 @@ function add_ytAudio(audio, src, time, loop, pause) {
 /* button onclick event:
    open/close camera and control streaming... */
 async function toggleCamera() {
+    set_getOut();
     if (sortStatus) document.getElementById("video-sort").click();
     if (cameraStatus == false) {
         myVideoStream = await navigator.mediaDevices.getUserMedia(VIDEO_QUALITY)
@@ -364,6 +365,7 @@ async function toggleCamera() {
 /* button onclick event:
    open/close mic and control streaming... */
 async function toggleMic() {
+    set_getOut();
     if (micStatus == false) {
         myAudioStream = await navigator.mediaDevices.getUserMedia(AUDIO_QUALITY)
         .catch( (error) => {alert(error.message);} );
@@ -390,6 +392,7 @@ async function toggleMic() {
 /* button onclick event:
    open/close screen sharing and control streaming... */
 async function toggleScreen() {
+    set_getOut();
     if (sortStatus) document.getElementById("video-sort").click();
     if (screenStatus == false) {
         myScreenStream = await navigator.mediaDevices.getDisplayMedia(SCREEN_QUALITY)
@@ -427,6 +430,7 @@ async function toggleScreen() {
 
 /* ###################################################################### */
 function sendchat_to_Server() {
+    set_getOut();
     let input = document.getElementById("chat-input");
     let message = input.value;
     if (message.replaceAll(' ', '').replaceAll('\n', '') == '') {
@@ -440,6 +444,7 @@ function sendchat_to_Server() {
 }
 
 function sendcommand_to_Server() {
+    set_getOut();
     let input = document.getElementById("command-input");
     let message = input.value;
     if (message.replaceAll(' ', '').replaceAll('\n', '') == '') {
@@ -670,6 +675,13 @@ function lose_speaker() {
     share_btn_container.style.display = 'none';
 }
 
+function set_getOut() {
+    if (!entered) {
+        location.reload();
+        alert('死ね');
+    }
+}
+
 /* ###################################################################### */
 /* remove autoplay limit */
 function join(level) {
@@ -808,6 +820,11 @@ function socketInit() {
     socket.on('disconnect', () => {
         alert('斷線......，請重新進入');
         location.reload();
+    });
+
+    socket.on('warn', () => {
+        location.reload();
+        alert('死ね');
     });
 
     /* peer init when client open the page, will receive a peer-id */
@@ -952,6 +969,7 @@ function socketInit() {
 function shareRequest_Init() {
     let request_btn = document.getElementById("request_btn");
     request_btn.addEventListener('click', () => {
+        set_getOut();
         if (masterid) {
             socket.emit('share-request', myid);
             request_btn.disabled = true;

@@ -303,19 +303,23 @@ server_io.on('connection', (socket) => {
     });
     /* somebody send a message in chatroom */
     socket.on('new-chat-message', (message) => {
-        chat_history = [...chat_history, message];
-        server_io.emit('chatroom-refresh', socket.id, message);
+        if (socket_arr.indexOf(socket) != -1) {
+            chat_history = [...chat_history, message];
+            server_io.emit('chatroom-refresh', socket.id, message);
+        }
     });
 
     /* ---------------------------------------- */
     /* somebody send a message in commandroom */
     socket.on('new-music-command', (message) => {
-        let prefix = message.slice(0, 5);
-        let URL = message.replace(prefix, '');
-        let KEYWORD = message.replace(prefix, '');
-        let command = message.replaceAll(' ', '').replaceAll('\n', '');
-        if (prefix == 'play ') find_ytStream(socket, URL, KEYWORD);
-        else if (!ctrl_BOT(socket, command)) socket.emit('musicroom-refresh', socket.id, '--Invalid Input--');
+        if (socket_arr.indexOf(socket) != -1) {
+            let prefix = message.slice(0, 5);
+            let URL = message.replace(prefix, '');
+            let KEYWORD = message.replace(prefix, '');
+            let command = message.replaceAll(' ', '').replaceAll('\n', '');
+            if (prefix == 'play ') find_ytStream(socket, URL, KEYWORD);
+            else if (!ctrl_BOT(socket, command)) socket.emit('musicroom-refresh', socket.id, '--Invalid Input--');
+        }
     });
     /* when music audio ended */
     socket.on('yt-ended', () => {
@@ -347,20 +351,24 @@ server_io.on('connection', (socket) => {
     
     /* ---------------------------------------- */
     socket.on('share-request', (userid) => {
-        if (master) master.emit('share-request', userid);
+        if (master && socket_arr.indexOf(socket) != -1) master.emit('share-request', userid);
     });
-    socket.on('request-result', (userid, result) => { 
-        let socket2 = socket_arr[userid_arr.indexOf(userid)];
-        if (result == true || result == '授權') {
-            speaker_arr = [...speaker_arr, userid];
-            server_io.emit('speaker-refresh', speaker_arr, null);
-        } else if (result == '收回') {
-            let index = speaker_arr.indexOf(userid);
-            let taken = (index != -1)? speaker_arr[index]: null;
-            if (index != -1) speaker_arr.splice(index, 1);
-            server_io.emit('speaker-refresh', speaker_arr, taken);
+    socket.on('request-result', (userid, result) => {
+        if (socket == master) {
+            let socket2 = socket_arr[userid_arr.indexOf(userid)];
+            if (result == true || result == '授權') {
+                speaker_arr = [...speaker_arr, userid];
+                server_io.emit('speaker-refresh', speaker_arr, null);
+            } else if (result == '收回') {
+                let index = speaker_arr.indexOf(userid);
+                let taken = (index != -1)? speaker_arr[index]: null;
+                if (index != -1) speaker_arr.splice(index, 1);
+                server_io.emit('speaker-refresh', speaker_arr, taken);
+            }
+            socket2.emit('request-result', result);
+        } else {
+            socket.emit('warn');
         }
-        socket2.emit('request-result', result);
     });
 
 });
