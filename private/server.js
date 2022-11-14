@@ -4,6 +4,7 @@ const SERVER_HOST = process.env.SERVER_HOST;
 const SERVER_PORT = process.env.SERVER_PORT;
 const PEER_PORT = process.env.PEER_PORT;
 const OPTION_KEY = process.env.OPTION_KEY;
+const HOST_PASSWORD = process.env.HOST_PASSWORD;
 
 let https = require('https');
 let url = require('url');
@@ -33,6 +34,10 @@ let myPeerServer = PeerServer({
 /* ---------------------------------------- */
 let server;
 let server_io;
+
+let master = null;
+let masterid = null;
+let speaker_arr = [];
 
 let userid_arr = [];
 let username_arr = [];
@@ -205,6 +210,7 @@ server = https.createServer(options[OPTION_KEY], (request, response) => {
         case '/js/main.js':
         case '/media/icon/mic-off.png':
         case '/media/icon/mic-on.png':
+        case '/media/icon/earphone.png':
             fs.readFile(parent + path, (error, data) => {
                 if (error) {
                     response.writeHead(404);
@@ -239,21 +245,34 @@ server = https.createServer(options[OPTION_KEY], (request, response) => {
 server_io = require('socket.io')(server);
 
 server_io.on('connection', (socket) => {
+    /* when somebody want to be the host */
+    socket.on('check-password', (password) => {
+        let result = 'already';
+        if (!master) result = (HOST_PASSWORD == password);
+        socket.emit('password-result', result);
+    });
     /* when somebody disconnect */
     socket.on('disconnect', () => {
         let index = socket_arr.indexOf(socket);
         if (index != -1) {
             /* find the left one from arr */
             let leaveid =  userid_arr[index];
+            if (leaveid == masterid) {
+                master = null;
+                masterid = null;
+            }
             /* remove the left one in arr */
             socket_arr.splice(index, 1);
             userid_arr.splice(index, 1);
             username_arr.splice(index, 1);
             index = yt_arr.indexOf(socket);
             if (index != -1) yt_arr.splice(index, 1);
+            index = speaker_arr.indexOf(leaveid);
+            if (index != -1) speaker_arr.splice(index, 1);
             /* update clients data */
-            server_io.emit('all-user-id', userid_arr, username_arr);
-            server_io.emit('someone-left', leaveid);
+            server_io.emit('speaker-refresh', speaker_arr, null);
+            server_io.emit('all-user-id', userid_arr, username_arr, null);
+            server_io.emit('someone-left', leaveid, (masterid == null));
             server_io.emit('close-video-all' + leaveid);
             server_io.emit('close-audio' + leaveid);
             /* clear chatroom if nobody online */
@@ -264,33 +283,43 @@ server_io.on('connection', (socket) => {
         }
     });
     /* when somebody enter main page */
-    socket.on('new-user-request', (userid, username) => {
+    socket.on('new-user-request', (userid, username, level) => {
         if (socket_arr.indexOf(socket) == -1) {
+            if (level == 'host') {
+                master = socket;
+                masterid = userid;
+            }
             socket_arr = [...socket_arr, socket];
             userid_arr = [...userid_arr, userid];
             username_arr = [...username_arr, username];
             yt_arr = [...yt_arr, socket];
+            server_io.emit('first-speaker', speaker_arr);
             server_io.emit('new-user-id', userid);
-            server_io.emit('all-user-id', userid_arr, username_arr);
+            server_io.emit('all-user-id', userid_arr, username_arr, masterid);
             socket.emit('chat-history', chat_history);
             socket.emit('musicroom-refresh', '', get_MusicList());
+            server_io.emit('speaker-refresh', speaker_arr, null);
         }
     });
     /* somebody send a message in chatroom */
     socket.on('new-chat-message', (message) => {
-        chat_history = [...chat_history, message];
-        server_io.emit('chatroom-refresh', socket.id, message);
+        if (socket_arr.indexOf(socket) != -1) {
+            chat_history = [...chat_history, message];
+            server_io.emit('chatroom-refresh', socket.id, message);
+        }
     });
 
     /* ---------------------------------------- */
     /* somebody send a message in commandroom */
     socket.on('new-music-command', (message) => {
-        let prefix = message.slice(0, 5);
-        let URL = message.replace(prefix, '');
-        let KEYWORD = message.replace(prefix, '');
-        let command = message.replaceAll(' ', '').replaceAll('\n', '');
-        if (prefix == 'play ') find_ytStream(socket, URL, KEYWORD);
-        else if (!ctrl_BOT(socket, command)) socket.emit('musicroom-refresh', socket.id, '--Invalid Input--');
+        if (socket_arr.indexOf(socket) != -1) {
+            let prefix = message.slice(0, 5);
+            let URL = message.replace(prefix, '');
+            let KEYWORD = message.replace(prefix, '');
+            let command = message.replaceAll(' ', '').replaceAll('\n', '');
+            if (prefix == 'play ') find_ytStream(socket, URL, KEYWORD);
+            else if (!ctrl_BOT(socket, command)) socket.emit('musicroom-refresh', socket.id, '--Invalid Input--');
+        }
     });
     /* when music audio ended */
     socket.on('yt-ended', () => {
@@ -320,6 +349,28 @@ server_io.on('connection', (socket) => {
         server_io.emit('close-audio' + userid);
     });
     
+    /* ---------------------------------------- */
+    socket.on('share-request', (userid) => {
+        if (master && socket_arr.indexOf(socket) != -1) master.emit('share-request', userid);
+    });
+    socket.on('request-result', (userid, result) => {
+        if (socket == master) {
+            let socket2 = socket_arr[userid_arr.indexOf(userid)];
+            if (result == true || result == '授權') {
+                speaker_arr = [...speaker_arr, userid];
+                server_io.emit('speaker-refresh', speaker_arr, null);
+            } else if (result == '收回') {
+                let index = speaker_arr.indexOf(userid);
+                let taken = (index != -1)? speaker_arr[index]: null;
+                if (index != -1) speaker_arr.splice(index, 1);
+                server_io.emit('speaker-refresh', speaker_arr, taken);
+            }
+            socket2.emit('request-result', result);
+        } else {
+            socket.emit('warn');
+        }
+    });
+
 });
 
 /* ###################################################################### */
