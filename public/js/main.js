@@ -1055,29 +1055,22 @@ function shareRequest_Init() {
         }
     });
 
-    /* ---------------------------------------- */
     /* everyone */
-    socket.on('first-speaker', (arr) => {
+    socket.on('speaker-refresh', (arr, taken, userid) => {
         speaker_arr = arr;
-    });
-
-    /* everyone */
-    socket.on('speaker-refresh', (arr, taken) => {
-        speaker_arr = arr;
-        if (taken) {
-            let result = judge_userLevel(taken);
-            let container_req = document.getElementById('audience-request-container-' + taken);
-            let container = document.getElementById('audience-container-' + taken);
+        if (taken && userid) {
+            let result = judge_userLevel(userid);
+            let container_req = document.getElementById('audience-request-container-' + userid);
+            let container = document.getElementById('audience-container-' + userid);
             let nameTag = container.querySelector('.audience-container2').querySelector('div');
             let icon = container.querySelector('.mic-icon');
             let volume_ctrl = container.querySelector('.mic-volume'); 
             if (container_req) container_req.style.order = result.order;
             container.style.order = result.order;
-            nameTag.innerText = username_arr[userid_arr.indexOf(taken)] + result.postfix;
+            nameTag.innerText = username_arr[userid_arr.indexOf(userid)] + result.postfix;
             icon.src = EARPHONE_URL;
             if (volume_ctrl) volume_ctrl.style.display = 'none';
-        }
-        speaker_arr.map( (userid) => {
+        } else if (!taken && userid) {
             let result = judge_userLevel(userid);
             let container_req = document.getElementById('audience-request-container-' + userid);
             let container = document.getElementById('audience-container-' + userid);
@@ -1089,7 +1082,7 @@ function shareRequest_Init() {
             nameTag.innerText = username_arr[userid_arr.indexOf(userid)] + result.postfix;
             icon.src = MIC_OFF_URL;
             if (volume_ctrl) volume_ctrl.style.display = 'inline';
-        });
+        }
     });
 
 }

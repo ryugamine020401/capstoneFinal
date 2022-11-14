@@ -297,7 +297,7 @@ server_io.on('connection', (socket) => {
             index = speaker_arr.indexOf(leaveid);
             if (index != -1) speaker_arr.splice(index, 1);
             /* update clients data */
-            server_io.emit('speaker-refresh', speaker_arr, null);
+            server_io.emit('speaker-refresh', speaker_arr, false, null);
             server_io.emit('all-user-id', userid_arr, username_arr, null);
             server_io.emit('someone-left', leaveid, (masterid == null));
             server_io.emit('close-video-all' + leaveid);
@@ -320,12 +320,11 @@ server_io.on('connection', (socket) => {
             userid_arr = [...userid_arr, userid];
             username_arr = [...username_arr, username];
             yt_arr = [...yt_arr, socket];
-            server_io.emit('first-speaker', speaker_arr);
+            server_io.emit('speaker-refresh', speaker_arr, false, null);
             server_io.emit('new-user-id', userid);
             server_io.emit('all-user-id', userid_arr, username_arr, masterid);
             socket.emit('chat-history', chat_history);
             socket.emit('musicroom-refresh', '', get_MusicList());
-            server_io.emit('speaker-refresh', speaker_arr, null);
         }
     });
     /* somebody send a message in chatroom */
@@ -394,12 +393,12 @@ server_io.on('connection', (socket) => {
             let socket2 = socket_arr[userid_arr.indexOf(userid)];
             if (result == true || result == '授權') {
                 speaker_arr = [...speaker_arr, userid];
-                server_io.emit('speaker-refresh', speaker_arr, null);
+                server_io.emit('speaker-refresh', speaker_arr, false, userid);
             } else if (result == '收回') {
                 let index = speaker_arr.indexOf(userid);
                 let taken = (index != -1)? speaker_arr[index]: null;
                 if (index != -1) speaker_arr.splice(index, 1);
-                server_io.emit('speaker-refresh', speaker_arr, taken);
+                server_io.emit('speaker-refresh', speaker_arr, true, taken);
             }
             socket2.emit('request-result', result);
         } else {
