@@ -528,13 +528,48 @@ function change_Volume(object, volume) {
 }
 
 /* ###################################################################### */
+function append_memberRequest2(username, userid, socket) {
+    let req_res = document.getElementById("audience-request-response");
+    if (!req_res) return;
+    let container = document.createElement('div');
+    container.id = 'audience-request-container2-' + userid;
+    container.className = 'audience-request-container';
+    let accept_btn = document.createElement('button');
+    let reject_btn = document.createElement('button');
+    let audienceName = document.createElement('div');
+    accept_btn.innerText = '允許';
+    reject_btn.innerText = '拒絕';
+    accept_btn.style.marginRight = '10px';
+    reject_btn.style.marginRight = '10px';
+    audienceName.innerText = username;
+    accept_btn.addEventListener('click', () => {
+        let another = document.getElementById('audience-request-container-' + userid);
+        if (another) {
+            let btn = another.querySelector('button');
+            btn.innerText = '收回';
+            btn.style.background = 'red';
+        }
+        container.remove();
+        socket.emit('request-result', userid, true);
+    });
+    reject_btn.addEventListener('click', () => {
+        container.remove();
+        socket.emit('request-result', userid, false);
+    });
+    container.append(accept_btn);
+    container.append(reject_btn);
+    container.append(audienceName);
+    req_res.append(container);
+}
+
 function append_memberRequest(userid, i, order) {
+    let request = document.getElementById("audience-request");
+    if (!request) return;
     let mochi;
     if (order == 1 || order == 2) return;
     else if (order == 3) mochi = true;
     else if (order == 4) mochi = false;
     mochi = (speaker_arr.indexOf(userid) == -1)? mochi: true;
-    let request = document.getElementById("audience-request");
     let container = document.createElement('div');
     container.id = 'audience-request-container-' + userid;
     container.className = 'audience-request-container';
@@ -635,39 +670,6 @@ function lose_speaker() {
     share_btn_container.style.display = 'none';
 }
 
-function append_memberRequest2(username, userid, socket) {
-    let req_res = document.getElementById("audience-request-response");
-    let container = document.createElement('div');
-    container.id = 'audience-request-container2-' + userid;
-    container.className = 'audience-request-container';
-    let accept_btn = document.createElement('button');
-    let reject_btn = document.createElement('button');
-    let audienceName = document.createElement('div');
-    accept_btn.innerText = '允許';
-    reject_btn.innerText = '拒絕';
-    accept_btn.style.marginRight = '10px';
-    reject_btn.style.marginRight = '10px';
-    audienceName.innerText = username;
-    accept_btn.addEventListener('click', () => {
-        let another = document.getElementById('audience-request-container-' + userid);
-        if (another) {
-            let btn = another.querySelector('button');
-            btn.innerText = '收回';
-            btn.style.background = 'red';
-        }
-        container.remove();
-        socket.emit('request-result', userid, true);
-    });
-    reject_btn.addEventListener('click', () => {
-        container.remove();
-        socket.emit('request-result', userid, false);
-    });
-    container.append(accept_btn);
-    container.append(reject_btn);
-    container.append(audienceName);
-    req_res.append(container);
-}
-
 /* ###################################################################### */
 /* remove autoplay limit */
 function join(level) {
@@ -735,8 +737,10 @@ function Init() {
         } else {
             if (myname == '') myname = 'USER';
             document.getElementById("username").innerText = myname;
-            document.getElementById("level-tag").style.display = 'none';
-            document.getElementById("request-tag").style.display = 'none';
+            document.getElementById("level-tag").remove();
+            document.getElementById("request-tag").remove();
+            document.getElementById("audience-request").remove();
+            document.getElementById("audience-request-response").remove();
             lose_speaker();
             join('client');
         }
