@@ -4,7 +4,6 @@ const SERVER_HOST = process.env.SERVER_HOST;
 const SERVER_PORT = process.env.SERVER_PORT;
 const PEER_PORT = process.env.PEER_PORT;
 const OPTION_KEY = process.env.OPTION_KEY;
-const HOST_PASSWORD = process.env.HOST_PASSWORD;
 
 let https = require('https');
 let url = require('url');
@@ -99,7 +98,7 @@ function play_nextMusic(roomId, socketid) {
         if (music_list[roomId][0]) {
             server_io.in(roomId).emit('yt-stream', music_list[roomId][0].url);
             server_io.in(roomId).emit('musicroom-refresh', socketid, `Music Start | ${music_list[roomId][0].title}`);
-            socket_arr.map( (socket2) => {
+            socket_arr[roomId].map( (socket2) => {
                 let index = yt_arr[roomId].indexOf(socket2);
                 if (index != -1) yt_arr[roomId].splice(index, 1);
             });
@@ -203,7 +202,7 @@ function find_ytStream(roomId, socket, URL, KEYWORD) {
             server_io.in(roomId).emit('musicroom-refresh', socket.id, `Add To List | ${result.title}`);
         }
         music_list[roomId] = [...music_list[roomId], result];
-        socket_arr.map( (socket2) => {
+        socket_arr[roomId].map( (socket2) => {
             let index = yt_arr[roomId].indexOf(socket2);
             if (index != -1) yt_arr[roomId].splice(index, 1);
         });
@@ -217,7 +216,7 @@ function find_ytStream(roomId, socket, URL, KEYWORD) {
                 server_io.in(roomId).emit('musicroom-refresh', socket.id, `Add To List | ${result.title}`);
             }
             music_list[roomId] = [...music_list[roomId], result];
-            socket_arr.map( (socket2) => {
+            socket_arr[roomId].map( (socket2) => {
                 let index = yt_arr[roomId].indexOf(socket2);
                 if (index != -1) yt_arr[roomId].splice(index, 1);
             });
