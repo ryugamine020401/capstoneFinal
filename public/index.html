@@ -37,9 +37,10 @@
         input[type="range"]:hover {
             cursor: pointer;
         }
-        textarea:hover,
-        #password:hover,
-        #name-input:hover {
+        #user-name-input:hover,
+        #host-name-input:hover,
+        #room-name-input:hover,
+        textarea:hover {
             cursor: text;
         }
         /* ------------------------------ */
@@ -58,44 +59,6 @@
             word-wrap: break-word;
         }
         /* ------------------------------ */
-        .confirmArea {
-            width: 40vw;
-            height: 20vh;
-            position: fixed;
-            top: 0;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            margin: auto;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-        .confirm {
-            height: 50%;
-            width: 100%;
-            display: flex;
-            flex-direction: row;
-        }
-        #password,
-        #name-input {
-            flex: 8;
-            margin: 20px;
-            resize:none;
-            font-size: larger;
-            background-color: #202124;
-            color: #eeeeee; 
-            border-color: #eeeeee;
-            border-style: solid;
-        }
-        #host-check,
-        #join-check {
-            flex: 2;
-            margin: 20px;
-            font-size: larger;
-            overflow: hidden;
-        }
-        /* ------------------------------ */
         .topArea {
             width: 100%;
             height: 10vh;
@@ -110,7 +73,7 @@
             flex-direction: row;
         }
         /* ------------------------------ */
-        #username {
+        #roomName {
             text-align: center;
             height: 30px;
         }
@@ -389,22 +352,107 @@
             text-align: center;
         }
         /* ------------------------------ */
+        .homepage {
+            width: 40vw;
+            height: 10vh;
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            margin: auto;
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+        }
+        #creat-room,
+        #join-room {
+            font-size: larger;
+            height: 100%;
+            width: 45%;
+        }
+        /* ------------------------------ */
+        .join-room-container,
+        .creat-room-container {
+            width: 40vw;
+            height: 20vh;
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            margin: auto;
+            display: none;
+            flex-direction: row;
+            justify-content: space-between;
+        }
+        .creat-container {
+            flex: 8;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .creat-container2 {
+            flex: 2;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        #room-choice,
+        #user-name-input,
+        #host-name-input,
+        #room-name-input {
+            margin: 10px;
+            height: 50%;
+            resize:none;
+            font-size: larger;
+            background-color: #202124;
+            color: #eeeeee; 
+            border-color: #eeeeee;
+            border-style: solid;
+        }
+        #lastpage2,
+        #user-join-check,
+        #lastpage,
+        #host-join-check {
+            margin: 10px;
+            height: 50%;
+            font-size: larger;
+        }
+        /* ------------------------------ */  
     </style>
 </head>
 <body>
     <!-- ###################################################################### -->
-    <div class="confirmArea">
-        <div class="confirm">
-            <input id="name-input" placeholder="請輸入暱稱 (最多15個字)">
-            <button id="join-check">聽眾加入</button>
+    <div class="homepage">
+        <button id="creat-room">建立房間</button>
+        <button id="join-room">加入房間</button>
+    </div>
+    <div class="creat-room-container">
+        <div class="creat-container">
+            <input id="host-name-input" placeholder="請輸入暱稱 (最多15個字)">
+            <input id="room-name-input" placeholder="房間名稱">
         </div>
-        <div class="confirm">
-            <input id="password" placeholder="主持人請輸入密碼" type="password">
-            <button id="host-check">主持人加入</button>
+        <div class="creat-container2">
+            <button id="lastpage">上一頁</button>
+            <button id="host-join-check">加入</button>
         </div>
     </div>
+    <div class="join-room-container">
+        <div class="creat-container">
+            <input id="user-name-input" placeholder="請輸入暱稱 (最多15個字)">
+            <select id="room-choice"></select>
+        </div>
+        <div class="creat-container2">
+            <button id="lastpage2">上一頁</button>
+            <button id="user-join-check">加入</button>
+        </div>
+    </div>
+    <!--  ----------------------------------------  -->
     <div class="topArea">
-        <h2 id="username">USER</h2>
+        <h2 id="roomName">Room</h2>
         <div class="btn_ctrl">
             <span class="user_btn-container">
                 <input type="checkbox" id="muted-toggle">
@@ -429,6 +477,7 @@
             </span>
         </div>
     </div>
+    <!--  ----------------------------------------  -->
     <div class="mainArea">
         <div class="videoArea">
             <h3 style="margin: 7px">畫面</h3>

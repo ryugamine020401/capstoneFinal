@@ -34,20 +34,23 @@ let myPeerServer = PeerServer({
 /* ---------------------------------------- */
 let server;
 let server_io;
+let roomCount = 0;
+let room_arr = [];
+let roomName_arr = [];
 
-let master = null;
-let masterid = null;
-let speaker_arr = [];
+let master = {};
+let masterid = {};
+let speaker_arr = {};
 
-let userid_arr = [];
-let username_arr = [];
-let socket_arr = [];
+let userid_arr = {};
+let username_arr = {};
+let socket_arr = {};
 
-let chat_history = [];
-let music_list = [];
-let yt_arr = [];
+let chat_history = {};
+let music_list = {};
+let yt_arr = {};
 
-let lastTime = Date.now();
+let lastTime = {};
 const command_def = `====================
 -- 播放音樂
 play YouTube-URL
@@ -79,10 +82,10 @@ cls
 ====================`;
 
 /* ###################################################################### */
-function get_MusicList() {
-    if (!music_list[0]) return '--No Music--';
+function get_MusicList(roomId) {
+    if (!music_list[roomId][0]) return '--No Music--';
     let message = '====================\n';
-    music_list.map( (music, i) => {
+    music_list[roomId].map( (music, i) => {
         if (i != 0) message += `\n\nMusic ${i} : ${music.title}`;
         else  message += `*Now Playing : ${music.title}`;
     });
@@ -90,22 +93,22 @@ function get_MusicList() {
     return message;
 }
 
-function play_nextMusic(socketid) {
-    if (music_list[0]) {
-        music_list.shift();
-        if (music_list[0]) {
-            server_io.emit('yt-stream', music_list[0].url);
-            server_io.emit('musicroom-refresh', socketid, `Music Start | ${music_list[0].title}`);
+function play_nextMusic(roomId, socketid) {
+    if (music_list[roomId][0]) {
+        music_list[roomId].shift();
+        if (music_list[roomId][0]) {
+            server_io.in(roomId).emit('yt-stream', music_list[roomId][0].url);
+            server_io.in(roomId).emit('musicroom-refresh', socketid, `Music Start | ${music_list[roomId][0].title}`);
             socket_arr.map( (socket2) => {
-                let index = yt_arr.indexOf(socket2);
-                if (index != -1) yt_arr.splice(index, 1);
+                let index = yt_arr[roomId].indexOf(socket2);
+                if (index != -1) yt_arr[roomId].splice(index, 1);
             });
         }
     }
 }
 
 /* send command to clients */
-function ctrl_BOT(socket, command, speaker) {
+function ctrl_BOT(roomId, socket, command, speaker) {
     switch (command) {
         case 'yt':
             socket.emit('musicroom-refresh', socket.id, command_def);
@@ -115,20 +118,20 @@ function ctrl_BOT(socket, command, speaker) {
             return true;
         case 'clear':
             if (speaker) {
-                music_list = [music_list[0]];
-                server_io.emit('musicroom-refresh', socket.id, '--Music Clear--');
+                music_list[roomId] = [music_list[roomId][0]];
+                server_io.in(roomId).emit('musicroom-refresh', socket.id, '--Music Clear--');
             } else {
                 socket.emit('musicroom-refresh', socket.id, '--權限不夠--');
             }
             return true;
         case 'list':
-            socket.emit('musicroom-refresh', socket.id, get_MusicList());
+            socket.emit('musicroom-refresh', socket.id, get_MusicList(roomId));
             return true;
         case 'pause':
             if (speaker) {
-                if (music_list[0]) {
-                    server_io.emit('yt-operate', 'pause');
-                    server_io.emit('musicroom-refresh', socket.id, '--Music Pause--');
+                if (music_list[roomId][0]) {
+                    server_io.in(roomId).emit('yt-operate', 'pause');
+                    server_io.in(roomId).emit('musicroom-refresh', socket.id, '--Music Pause--');
                 } else {
                     socket.emit('musicroom-refresh', socket.id, '--No Music playing--');
                 }
@@ -138,9 +141,9 @@ function ctrl_BOT(socket, command, speaker) {
             return true;
         case 'resume':
             if (speaker) {
-                if (music_list[0]) {
-                    server_io.emit('yt-operate', 'resume');
-                    server_io.emit('musicroom-refresh', socket.id, '--Music Resume--');
+                if (music_list[roomId][0]) {
+                    server_io.in(roomId).emit('yt-operate', 'resume');
+                    server_io.in(roomId).emit('musicroom-refresh', socket.id, '--Music Resume--');
                 } else {
                     socket.emit('musicroom-refresh', socket.id, '--No Music playing--');
                 }
@@ -150,10 +153,10 @@ function ctrl_BOT(socket, command, speaker) {
             return true;
         case 'skip':
             if (speaker) {
-                if (music_list[0]) {
-                    server_io.emit('yt-operate', 'skip');
-                    server_io.emit('musicroom-refresh', socket.id, '--Music Skip--');
-                    play_nextMusic(socket.id);
+                if (music_list[roomId][0]) {
+                    server_io.in(roomId).emit('yt-operate', 'skip');
+                    server_io.in(roomId).emit('musicroom-refresh', socket.id, '--Music Skip--');
+                    play_nextMusic(roomId, socket.id);
                 } else {
                     socket.emit('musicroom-refresh', socket.id, '--No Music playing--');
                 }
@@ -163,9 +166,9 @@ function ctrl_BOT(socket, command, speaker) {
             return true;
         case 'loop':
             if (speaker) {
-                if (music_list[0]) {
-                    server_io.emit('yt-operate', 'loop');
-                    server_io.emit('musicroom-refresh', socket.id, '--Music Loop--');
+                if (music_list[roomId][0]) {
+                    server_io.in(roomId).emit('yt-operate', 'loop');
+                    server_io.in(roomId).emit('musicroom-refresh', socket.id, '--Music Loop--');
                 } else {
                     socket.emit('musicroom-refresh', socket.id, '--No Music playing--');
                 }
@@ -175,9 +178,9 @@ function ctrl_BOT(socket, command, speaker) {
             return true;
         case 'unloop':
             if (speaker) {
-                if (music_list[0]) {
-                    server_io.emit('yt-operate', 'unloop');
-                    server_io.emit('musicroom-refresh', socket.id, '--Music Unloop--');
+                if (music_list[roomId][0]) {
+                    server_io.in(roomId).emit('yt-operate', 'unloop');
+                    server_io.in(roomId).emit('musicroom-refresh', socket.id, '--Music Unloop--');
                 } else {
                     socket.emit('musicroom-refresh', socket.id, '--No Music playing--');
                 }
@@ -190,36 +193,36 @@ function ctrl_BOT(socket, command, speaker) {
 }
 
 /* find yt streaming url and send to clients */
-function find_ytStream(socket, URL, KEYWORD) {
+function find_ytStream(roomId, socket, URL, KEYWORD) {
     yt.getStream_by_URL(URL, 'audioonly')
     .then( (result) => {
-        if (!music_list[0]) {
-            server_io.emit('yt-stream', result.url);
-            server_io.emit('musicroom-refresh', socket.id, `Music Start | ${result.title}`);
+        if (!music_list[roomId][0]) {
+            server_io.in(roomId).emit('yt-stream', result.url);
+            server_io.in(roomId).emit('musicroom-refresh', socket.id, `Music Start | ${result.title}`);
         } else {
-            server_io.emit('musicroom-refresh', socket.id, `Add To List | ${result.title}`);
+            server_io.in(roomId).emit('musicroom-refresh', socket.id, `Add To List | ${result.title}`);
         }
-        music_list = [...music_list, result];
+        music_list[roomId] = [...music_list[roomId], result];
         socket_arr.map( (socket2) => {
-            let index = yt_arr.indexOf(socket2);
-            if (index != -1) yt_arr.splice(index, 1);
+            let index = yt_arr[roomId].indexOf(socket2);
+            if (index != -1) yt_arr[roomId].splice(index, 1);
         });
     }).catch( (error) => {
         yt.getStream_by_KEYWORD(KEYWORD, 'audioonly')
         .then((result) => {
-            if (!music_list[0]) {
-                server_io.emit('yt-stream', result.url);
-                server_io.emit('musicroom-refresh', socket.id, `Music Start | ${result.title}`);
+            if (!music_list[roomId][0]) {
+                server_io.in(roomId).emit('yt-stream', result.url);
+                server_io.in(roomId).emit('musicroom-refresh', socket.id, `Music Start | ${result.title}`);
             } else {
-                server_io.emit('musicroom-refresh', socket.id, `Add To List | ${result.title}`);
+                server_io.in(roomId).emit('musicroom-refresh', socket.id, `Add To List | ${result.title}`);
             }
-            music_list = [...music_list, result];
+            music_list[roomId] = [...music_list[roomId], result];
             socket_arr.map( (socket2) => {
-                let index = yt_arr.indexOf(socket2);
-                if (index != -1) yt_arr.splice(index, 1);
+                let index = yt_arr[roomId].indexOf(socket2);
+                if (index != -1) yt_arr[roomId].splice(index, 1);
             });
         }).catch( (error) => {
-            server_io.emit('musicroom-refresh', socket.id, '--Not Found--');
+            server_io.in(roomId).emit('musicroom-refresh', socket.id, '--Not Found--');
         });
     });
 }
@@ -272,140 +275,173 @@ server_io = require('socket.io')(server, {
 });
 
 server_io.on('connection', (socket) => {
-    /* when somebody want to be the host */
-    socket.on('check-password', (password) => {
-        let result = 'already';
-        if (!master) result = (HOST_PASSWORD == password);
-        socket.emit('password-result', result);
-    });
-    /* when somebody disconnect */
-    socket.on('disconnect', () => {
-        let index = socket_arr.indexOf(socket);
-        if (index != -1) {
-            /* find the left one from arr */
-            let leaveid =  userid_arr[index];
-            if (leaveid == masterid) {
-                master = null;
-                masterid = null;
-            }
-            /* remove the left one in arr */
-            socket_arr.splice(index, 1);
-            userid_arr.splice(index, 1);
-            username_arr.splice(index, 1);
-            index = yt_arr.indexOf(socket);
-            if (index != -1) yt_arr.splice(index, 1);
-            index = speaker_arr.indexOf(leaveid);
-            if (index != -1) speaker_arr.splice(index, 1);
-            /* update clients data */
-            server_io.emit('speaker-refresh', speaker_arr, false, null);
-            server_io.emit('all-user-id', userid_arr, username_arr, null);
-            server_io.emit('someone-left', leaveid, (masterid == null));
-            server_io.emit('close-video-all' + leaveid);
-            server_io.emit('close-audio' + leaveid);
-            /* clear chatroom if nobody online */
-            if (!socket_arr[0]) {
-                chat_history = [];
-                music_list = [];
-            }
-        }
-    });
-    /* when somebody enter main page */
-    socket.on('new-user-request', (userid, username, level) => {
-        if (socket_arr.indexOf(socket) == -1) {
-            if (level == 'host') {
-                master = socket;
-                masterid = userid;
-            }
-            socket_arr = [...socket_arr, socket];
-            userid_arr = [...userid_arr, userid];
-            username_arr = [...username_arr, username];
-            yt_arr = [...yt_arr, socket];
-            server_io.emit('speaker-refresh', speaker_arr, false, null);
-            server_io.emit('new-user-id', userid);
-            server_io.emit('all-user-id', userid_arr, username_arr, masterid);
-            socket.emit('chat-history', chat_history);
-            socket.emit('musicroom-refresh', '', get_MusicList());
-        }
-    });
-    /* somebody send a message in chatroom */
-    socket.on('new-chat-message', (message) => {
-        if (socket_arr.indexOf(socket) != -1) {
-            chat_history = [...chat_history, message];
-            server_io.emit('chatroom-refresh', socket.id, message);
-        }
-    });
+    socket.emit('room-list', room_arr, roomName_arr);
 
-    /* ---------------------------------------- */
-    /* somebody send a message in commandroom */
-    socket.on('new-music-command', (message) => {
-        let exist = socket_arr.indexOf(socket) != -1;
-        let index = socket_arr.indexOf(socket);
-        index =  (index != -1)? speaker_arr.indexOf(userid_arr[index]): -1;
-        let speaker = index != -1 || socket == master;
-        if (exist && speaker) {
-            let prefix = message.slice(0, 5);
-            let URL = message.replace(prefix, '');
-            let KEYWORD = message.replace(prefix, '');
-            let command = message.replaceAll(' ', '').replaceAll('\n', '');
-            if (prefix == 'play ') find_ytStream(socket, URL, KEYWORD);
-            else if (!ctrl_BOT(socket, command, true)) socket.emit('musicroom-refresh', socket.id, '--Invalid Input--');
-        } else if (exist) {
-            let prefix = message.slice(0, 5);
-            let command = message.replaceAll(' ', '').replaceAll('\n', '');
-            if (prefix == 'play ') socket.emit('musicroom-refresh', socket.id, '--權限不夠--');
-            else if (!ctrl_BOT(socket, command, false)) socket.emit('musicroom-refresh', socket.id, '--Invalid Input--');
+    socket.on('join-room', (roomId, roomName) => {
+        /* socket join room */
+        if (roomId == 'creat') {
+            roomId = 'Room-' + String(roomCount);
+            roomCount += 1;
+            room_arr = [...room_arr, roomId];
+            roomName_arr = [...roomName_arr, roomName];
+            master[roomId] = null;
+            masterid[roomId] = null;
+            speaker_arr[roomId] = [];
+            userid_arr[roomId] = [];
+            username_arr[roomId] = [];
+            socket_arr[roomId] = [];
+            chat_history[roomId] = [];
+            music_list[roomId] = [];
+            yt_arr[roomId] = [];
+            lastTime[roomId] = Date.now();
+            server_io.emit('room-list', room_arr, roomName_arr);
         }
-    });
-    /* when music audio ended */
-    socket.on('yt-ended', () => {
-        let Time = Date.now();
-        if (Time - lastTime > 1800) {
-            lastTime = Time;
-            play_nextMusic('');
-        }
-    });
-    /* get client music audio streaming time... */
-    socket.on('yt-music-state', (pack) => {
-        yt_arr.map( (socket2) => {
-            socket2.emit('join-yt-stream', pack);
-        });
-        socket_arr.map( (socket2) => {
-            let index = yt_arr.indexOf(socket2);
-            if (index != -1) yt_arr.splice(index, 1);
-        });
-    });
+        socket.join(roomId);
 
-    /* ---------------------------------------- */
-    /* somebody stop capture */
-    socket.on('stop-videoStream', (userid, streamId, other) => {
-        server_io.emit('close-video' + userid + streamId, other);
-    });
-    socket.on('stop-audioStream', (userid) => {
-        server_io.emit('close-audio' + userid);
-    });
+        /* when somebody disconnect */
+        socket.on('disconnect', () => {
+            let index = socket_arr[roomId].indexOf(socket);
+            if (index != -1) {
+                /* find the left one from arr */
+                let leaveid =  userid_arr[roomId][index];
+                if (leaveid == masterid[roomId]) {
+                    master[roomId] = null;
+                    masterid[roomId] = null;
+                }
+                /* remove the left one in arr */
+                socket_arr[roomId].splice(index, 1);
+                userid_arr[roomId].splice(index, 1);
+                username_arr[roomId].splice(index, 1);
+                index = yt_arr[roomId].indexOf(socket);
+                if (index != -1) yt_arr[roomId].splice(index, 1);
+                index = speaker_arr[roomId].indexOf(leaveid);
+                if (index != -1) speaker_arr[roomId].splice(index, 1);
+                /* update clients data */
+                server_io.in(roomId).emit('speaker-refresh', speaker_arr[roomId], false, null);
+                server_io.in(roomId).emit('all-user-id', userid_arr[roomId], username_arr[roomId], null);
+                server_io.in(roomId).emit('someone-left', leaveid, (masterid[roomId] == null));
+                server_io.in(roomId).emit('close-video-all' + leaveid);
+                server_io.in(roomId).emit('close-audio' + leaveid);
+                /* clear chatroom if nobody online */
+                if (!socket_arr[roomId][0]) {
+                    chat_history[roomId] = [];
+                    music_list[roomId] = [];
+                    delete master[roomId];
+                    delete masterid[roomId];
+                    delete speaker_arr[roomId];
+                    delete userid_arr[roomId];
+                    delete username_arr[roomId];
+                    delete socket_arr[roomId];
+                    delete chat_history[roomId];
+                    delete music_list[roomId];
+                    delete yt_arr[roomId];
+                    delete lastTime[roomId];
+                    let index = room_arr.indexOf(roomId);
+                    if (index != -1) room_arr.splice(index, 1);
+                    if (index != -1) roomName_arr.splice(index, 1);
+                }
+            }
+        });
+
+        /* when somebody enter main page */
+        socket.on('new-user-request', (userid, username, level) => {
+            if (socket_arr[roomId].indexOf(socket) == -1) {
+                if (level == 'host') {
+                    master[roomId] = socket;
+                    masterid[roomId] = userid;
+                }
+                socket_arr[roomId] = [...socket_arr[roomId], socket];
+                userid_arr[roomId] = [...userid_arr[roomId], userid];
+                username_arr[roomId] = [...username_arr[roomId], username];
+                yt_arr[roomId] = [...yt_arr[roomId], socket];
+                server_io.in(roomId).emit('speaker-refresh', speaker_arr[roomId], false, null);
+                server_io.in(roomId).emit('new-user-id', userid);
+                server_io.in(roomId).emit('all-user-id', userid_arr[roomId], username_arr[roomId], masterid[roomId]);
+                socket.emit('chat-history', chat_history[roomId]);
+                socket.emit('musicroom-refresh', '', get_MusicList(roomId));
+            }
+        });
+
+        /* somebody send a message in chatroom */
+        socket.on('new-chat-message', (message) => {
+            if (socket_arr[roomId].indexOf(socket) != -1) {
+                chat_history[roomId] = [...chat_history[roomId], message];
+                server_io.in(roomId).emit('chatroom-refresh', socket.id, message);
+            }
+        });
+
+        /* ---------------------------------------- */
+        /* somebody send a message in commandroom */
+        socket.on('new-music-command', (message) => {
+            let exist = socket_arr[roomId].indexOf(socket) != -1;
+            let index = socket_arr[roomId].indexOf(socket);
+            index =  (index != -1)? speaker_arr[roomId].indexOf(userid_arr[roomId][index]): -1;
+            let speaker = index != -1 || socket == master[roomId];
+            if (exist && speaker) {
+                let prefix = message.slice(0, 5);
+                let URL = message.replace(prefix, '');
+                let KEYWORD = message.replace(prefix, '');
+                let command = message.replaceAll(' ', '').replaceAll('\n', '');
+                if (prefix == 'play ') find_ytStream(roomId, socket, URL, KEYWORD);
+                else if (!ctrl_BOT(roomId, socket, command, true)) socket.emit('musicroom-refresh', socket.id, '--Invalid Input--');
+            } else if (exist) {
+                let prefix = message.slice(0, 5);
+                let command = message.replaceAll(' ', '').replaceAll('\n', '');
+                if (prefix == 'play ') socket.emit('musicroom-refresh', socket.id, '--權限不夠--');
+                else if (!ctrl_BOT(roomId, socket, command, false)) socket.emit('musicroom-refresh', socket.id, '--Invalid Input--');
+            }
+        });
+        /* when music audio ended */
+        socket.on('yt-ended', () => {
+            let Time = Date.now();
+            if (Time - lastTime[roomId] > 1800) {
+                lastTime[roomId] = Time;
+                play_nextMusic(roomId, '');
+            }
+        });
+        /* get client music audio streaming time... */
+        socket.on('yt-music-state', (pack) => {
+            yt_arr[roomId].map( (socket2) => {
+                socket2.emit('join-yt-stream', pack);
+            });
+            socket_arr[roomId].map( (socket2) => {
+                let index = yt_arr[roomId].indexOf(socket2);
+                if (index != -1) yt_arr[roomId].splice(index, 1);
+            });
+        });
+
+        /* ---------------------------------------- */
+        /* somebody stop capture */
+        socket.on('stop-videoStream', (userid, streamId, other) => {
+            server_io.in(roomId).emit('close-video' + userid + streamId, other);
+        });
+        socket.on('stop-audioStream', (userid) => {
+            server_io.in(roomId).emit('close-audio' + userid);
+        });
+        
+        /* ---------------------------------------- */
+        socket.on('share-request', (userid) => {
+            if (master[roomId] && socket_arr[roomId].indexOf(socket) != -1) master[roomId].emit('share-request', userid);
+        });
+        socket.on('request-result', (userid, result) => {
+            if (socket == master[roomId]) {
+                let socket2 = socket_arr[roomId][userid_arr[roomId].indexOf(userid)];
+                if (result == true || result == '授權') {
+                    speaker_arr[roomId] = [...speaker_arr[roomId], userid];
+                    server_io.in(roomId).emit('speaker-refresh', speaker_arr[roomId], false, userid);
+                } else if (result == '收回') {
+                    let index = speaker_arr[roomId].indexOf(userid);
+                    let taken = (index != -1)? speaker_arr[roomId][index]: null;
+                    if (index != -1) speaker_arr[roomId].splice(index, 1);
+                    server_io.in(roomId).emit('speaker-refresh', speaker_arr[roomId], true, taken);
+                }
+                socket2.emit('request-result', result);
+            } else {
+                socket.emit('warn');
+            }
+        });
     
-    /* ---------------------------------------- */
-    socket.on('share-request', (userid) => {
-        if (master && socket_arr.indexOf(socket) != -1) master.emit('share-request', userid);
     });
-    socket.on('request-result', (userid, result) => {
-        if (socket == master) {
-            let socket2 = socket_arr[userid_arr.indexOf(userid)];
-            if (result == true || result == '授權') {
-                speaker_arr = [...speaker_arr, userid];
-                server_io.emit('speaker-refresh', speaker_arr, false, userid);
-            } else if (result == '收回') {
-                let index = speaker_arr.indexOf(userid);
-                let taken = (index != -1)? speaker_arr[index]: null;
-                if (index != -1) speaker_arr.splice(index, 1);
-                server_io.emit('speaker-refresh', speaker_arr, true, taken);
-            }
-            socket2.emit('request-result', result);
-        } else {
-            socket.emit('warn');
-        }
-    });
-
 });
 
 /* ###################################################################### */
