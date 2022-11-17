@@ -710,10 +710,16 @@ function set_getOut() {
 /* ###################################################################### */
 /* remove autoplay limit */
 function join(level) {
+    if (level != 'host') {
+        lose_speaker();
+        document.getElementById("level-tag").remove();
+        document.getElementById("request-tag").remove();
+        document.getElementById("audience-request").remove();
+        document.getElementById("audience-request-response").remove();
+    } else become_speaker();
     let audio = document.createElement("audio");
     audio.src = "media/sound/join.mp3";
     audio.addEventListener('play', () => {
-        document.querySelector('.confirmArea').style.display = 'none';
         document.querySelector('.topArea').style.display = 'block';
         document.querySelector('.mainArea').style.display = 'flex';
         /* send real request to server when audio ended */
@@ -722,66 +728,11 @@ function join(level) {
     audio.play();
 }
 
-function loginBtn_Init() {
-    let host_btn = document.getElementById('host-check');
-    host_btn.addEventListener('click', () => {
-        host_btn.disabled = true;
-        let name_input = document.getElementById("name-input");
-        let login_input = document.getElementById("password");
-        myname = name_input.value;
-        if (myname.length > 15) {
-            host_btn.disabled = false;
-            name_input.value = '';
-            alert('稱呼過長，請重新輸入 (最多15個字)');
-        } else {
-            let password = login_input.value; 
-            socket.once('password-result', (result) => {
-                if (result == false) {
-                    host_btn.disabled = false;
-                    login_input.value = '';
-                    alert('密碼錯誤');
-                } else if (result == true) {
-                    if (myname == '') myname = 'HOST';
-                    document.getElementById("username").innerText = myname;
-                    become_speaker();
-                    join('host');
-                } else if (result == 'already') {
-                    login_input.value = '';
-                    alert('房主已存在');
-                }
-            });
-            socket.emit('check-password', password);
-        }
-    });
-}
-
 function Init() {
     /* lock right-click */
     document.oncontextmenu = function(){
         window.event.returnValue = false; 
     }
-
-    /* add join event */
-    let join_btn = document.getElementById("join-check");
-    join_btn.addEventListener('click', () => {
-        join_btn.disabled = true;
-        let name_input = document.getElementById("name-input");
-        myname = name_input.value;
-        if (myname.length > 15) {
-            join_btn.disabled = false;
-            name_input.value = '';
-            alert('稱呼過長，請重新輸入 (最多15個字)');
-        } else {
-            if (myname == '') myname = 'USER';
-            document.getElementById("username").innerText = myname;
-            document.getElementById("level-tag").remove();
-            document.getElementById("request-tag").remove();
-            document.getElementById("audience-request").remove();
-            document.getElementById("audience-request-response").remove();
-            lose_speaker();
-            join('client');
-        }
-    });
 
     /* we dont want to listen voice from ourself */
     myVideo.muted = true;
@@ -1028,6 +979,7 @@ function shareRequest_Init() {
         document.getElementById("audience-request").style.display = 'none';
         document.getElementById("audience-request-response").style.display = 'flex';
     });
+
     /* ---------------------------------------- */
     /* master only */
     socket.on('share-request', (userid) => {
@@ -1087,9 +1039,90 @@ function shareRequest_Init() {
 
 }
 
+function joinInit() {
+    let room_arr, roomName_arr;
+    let homepage_class = document.querySelector('.homepage');
+    let creat_class = document.querySelector('.creat-room-container');
+    let join_class = document.querySelector('.join-room-container');
+
+    document.getElementById('creat-room').addEventListener('click', () => {
+        homepage_class.style.display = 'none';
+        creat_class.style.display = 'flex';
+    });
+    document.getElementById('join-room').addEventListener('click', () => {
+        homepage_class.style.display = 'none';
+        join_class.style.display = 'flex';
+    });
+
+    /* ---------------------------------------- */
+    document.getElementById('lastpage').addEventListener('click', () => {
+        homepage_class.style.display = 'flex';
+        creat_class.style.display = 'none';
+        join_class.style.display = 'none';
+    });
+    document.getElementById('lastpage2').addEventListener('click', () => {
+        homepage_class.style.display = 'flex';
+        creat_class.style.display = 'none';
+        join_class.style.display = 'none';
+    });
+    socket.on('room-list', (arr1, arr2) => {
+        let choice = document.getElementById('room-choice');
+        choice.innerHTML = `<option value="noRoom" selected>選擇房間</option>`;
+        arr1.map( (roomId, i) => {
+            let option = document.createElement('option');
+            option.innerText = arr2[i];
+            option.value = roomId;
+            option.id = roomId;
+            choice.append(option);
+        });
+        room_arr = arr1;
+        roomName_arr = arr2;
+    });
+
+    /* ---------------------------------------- */
+    document.getElementById('host-join-check').addEventListener('click', () => {
+        let roomName = document.getElementById('room-name-input').value;
+        let hostName = document.getElementById('host-name-input').value;
+        if (roomName.replaceAll(' ', '') == '') roomName = 'Room ' + (room_arr.length + 1);
+        if (hostName.replaceAll(' ', '') == '') hostName = 'Host';
+        if (hostName.length > 15) {
+            document.getElementById('host-name-input').value = '';
+            alert('稱呼過長，請重新輸入 (最多15個字)');
+        } else if (roomName.length > 15) {
+            document.getElementById('room-name-input').value = '';
+            alert('房間名過長，請重新輸入 (最多15個字)');
+        } else {
+            myname = hostName;
+            creat_class.style.display = 'none';
+            document.getElementById('roomName').innerText = roomName;
+            socket.emit('join-room', 'creat', roomName);
+            join('host');
+        }
+    });
+
+    document.getElementById('user-join-check').addEventListener('click', () => {
+        let roomId = document.getElementById('room-choice').value;
+        let userName = document.getElementById('user-name-input').value;
+        if (userName.replaceAll(' ', '') == '') userName = 'USER';
+        if (roomId == 'noRoom') {
+            alert('未選擇房間');
+        } else if (userName.length > 15) {
+            document.getElementById('user-name-input').value = '';
+            alert('稱呼過長，請重新輸入 (最多15個字)');
+        } else {
+            myname = userName;
+            join_class.style.display = 'none';
+            document.getElementById('roomName').innerText = roomName_arr[room_arr.indexOf(roomId)];
+            socket.emit('join-room', roomId, null);
+            join('client');
+        }
+    });
+
+}
+
 /* ###################################################################### */
 Init();
 socketInit();
-loginBtn_Init();
+joinInit();
 shareRequest_Init();
 listenStreaming();
