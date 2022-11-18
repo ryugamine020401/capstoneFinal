@@ -488,8 +488,9 @@ function add_KeypressEvent() {
     let Enter = false;
     document.getElementById('command-input').addEventListener('keydown', (e) => {
         console.log(e.key) 
+        console.log(e.detail)
         if (e.key == 'Shift') Shift = true;
-        if (e.key = 'Enter') Enter = true;
+        if (e.key == 'Enter') Enter = true;
     });
     document.getElementById('command-input').addEventListener('keyup', (e) => {
         if (Shift == true && e.key == 'Enter') sendcommand_to_Server();
@@ -500,7 +501,7 @@ function add_KeypressEvent() {
     });
     document.getElementById('chat-input').addEventListener('keydown', (e) => {
         if (e.key == 'Shift') Shift = true;
-        if (e.key = 'Enter') Enter = true;
+        if (e.key == 'Enter') Enter = true;
     });
     document.getElementById('chat-input').addEventListener('keyup', (e) => {
         if (Shift == true && e.key == 'Enter') sendchat_to_Server();
