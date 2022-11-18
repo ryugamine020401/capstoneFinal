@@ -14,12 +14,21 @@ function getVideoId(VIDEO_URL) {
 
 async function getStream_by_ID(VIDEO_ID, TYPE) {
   try {
+    let available = false;
     let info = await ytdl.getInfo(VIDEO_ID);
     let videoFormats = ytdl.filterFormats(info.formats, TYPE);
-    return Promise.resolve({
-      'title': info.videoDetails.title,
-      'url': videoFormats[0].url
+    let countries = info.videoDetails.availableCountries;
+    countries.map( (country) => {
+      if (country == 'TW') available = true;
     });
+    if (available) {
+      return Promise.resolve({
+        'title': info.videoDetails.title,
+        'url': videoFormats[0].url
+      });
+    } else {
+      return Promise.reject('Regional Restriction');
+    }
   } catch {
     return Promise.reject('Invalid Format');
   }
@@ -45,12 +54,18 @@ async function getStream_by_KEYWORD(KEYWORD, TYPE) {
 // .then( (result) => {
 //   console.log(result.title);
 //   console.log(result.url);
+// })
+// .catch( (error) => {
+//   console.log(error);
 // });
 
 // getStream_by_KEYWORD(KEYWORD, TYPE)
 // .then( (result) => {
 //   console.log(result.title);
 //   console.log(result.url);
+// })
+// .catch( (error) => {
+//   console.log(error);
 // });
 
 /* ###################################################################### */
