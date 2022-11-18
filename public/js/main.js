@@ -483,13 +483,13 @@ function sendcommand_to_Server() {
 }
 
 function add_KeypressEvent() {
-    console.log(e.key) 
+    
     let Shift = false;
     let Enter = false;
     document.getElementById('command-input').addEventListener('keydown', (e) => {
+        console.log(e.key) 
         if (e.key == 'Shift') Shift = true;
         if (e.key = 'Enter') Enter = true;
-        
     });
     document.getElementById('command-input').addEventListener('keyup', (e) => {
         if (Shift == true && e.key == 'Enter') sendcommand_to_Server();
