@@ -495,7 +495,7 @@ function add_KeypressEvent() {
         else if (Enter == true && e.key == 'Shift') sendcommand_to_Server();
         else if (e.code == 'NumpadEnter') sendcommand_to_Server();
         Shift = false;
-        Enter = false
+        Enter = false;
     });
     document.getElementById('chat-input').addEventListener('keydown', (e) => {
         if (e.key == 'Shift') Shift = true;
@@ -506,7 +506,7 @@ function add_KeypressEvent() {
         else if (Enter == true && e.key == 'Shift') sendchat_to_Server();
         else if (e.code == 'NumpadEnter') sendchat_to_Server();
         Shift = false;
-        Enter = false
+        Enter = false;
     });
 }
 
