@@ -1,8 +1,7 @@
-/* ###################################################################### */
+/* ====================================================================== */
 const ytdl = require('ytdl-core');
 const yts = require('yt-search');
 
-/* ###################################################################### */
 function getVideoId(VIDEO_URL) {
   let ID = '';
   if (ytdl.validateURL(VIDEO_URL)) {
@@ -25,6 +24,7 @@ async function getStream_by_ID(VIDEO_ID, TYPE) {
   }
 }
 
+/* ====================================================================== */
 async function getStream_by_URL(URL, TYPE) {
   let ID = getVideoId(URL);
   return getStream_by_ID(ID, TYPE);
@@ -36,7 +36,7 @@ async function getStream_by_KEYWORD(KEYWORD, TYPE) {
   return getStream_by_ID(ID, TYPE)
 }
 
-/* ###################################################################### */
+/* ====================================================================== */
 // const TYPE = 'audioonly';
 // const KEYWORD = '点描の唄';
 // const URL = 'https://www.youtube.com/watch?v=sEJKG60a1Zc';
@@ -53,8 +53,9 @@ async function getStream_by_KEYWORD(KEYWORD, TYPE) {
 //   console.log(result.url);
 // });
 
-/* ###################################################################### */
 module.exports = {
   getStream_by_URL: getStream_by_URL,
   getStream_by_KEYWORD: getStream_by_KEYWORD
 };
+
+/* ====================================================================== */

@@ -48,8 +48,8 @@ let socket_arr = {};
 let chat_history = {};
 let music_list = {};
 let yt_arr = {};
-
 let lastTime = {};
+
 const command_def = `====================
 -- 播放音樂
 play YouTube-URL
