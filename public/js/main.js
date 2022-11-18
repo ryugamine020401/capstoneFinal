@@ -483,13 +483,16 @@ function sendcommand_to_Server() {
 }
 
 function add_KeypressEvent() {
+    
     let Shift = false;
     let Enter = false;
     document.getElementById('command-input').addEventListener('keydown', (e) => {
         if (e.key == 'Shift') Shift = true;
         if (e.key = 'Enter') Enter = true;
+        console.log(e.key) 
     });
     document.getElementById('command-input').addEventListener('keyup', (e) => {
+        console.log(e.key) 
         if (Shift == true && e.key == 'Enter') sendcommand_to_Server();
         else if (Enter == true && e.key == 'Shift') sendcommand_to_Server();
         else if (e.code == 'NumpadEnter') sendcommand_to_Server();
