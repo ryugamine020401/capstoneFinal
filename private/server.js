@@ -336,8 +336,11 @@ server_io.on('connection', (socket) => {
                     delete yt_arr[roomId];
                     delete lastTime[roomId];
                     let index = room_arr.indexOf(roomId);
-                    if (index != -1) room_arr.splice(index, 1);
-                    if (index != -1) roomName_arr.splice(index, 1);
+                    if (index != -1) {
+                        room_arr.splice(index, 1);
+                        roomName_arr.splice(index, 1);
+                        server_io.emit('room-list', room_arr, roomName_arr);
+                    }
                 }
             }
         });

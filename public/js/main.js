@@ -1094,6 +1094,7 @@ function joinInit() {
         } else {
             myname = hostName;
             creat_class.style.display = 'none';
+            document.title = roomName;
             document.getElementById('roomName').innerText = roomName;
             socket.emit('join-room', 'creat', roomName);
             join('host');
@@ -1110,9 +1111,11 @@ function joinInit() {
             document.getElementById('user-name-input').value = '';
             alert('稱呼過長，請重新輸入 (最多15個字)');
         } else {
+            let roomName = roomName_arr[room_arr.indexOf(roomId)];
             myname = userName;
             join_class.style.display = 'none';
-            document.getElementById('roomName').innerText = roomName_arr[room_arr.indexOf(roomId)];
+            document.title = roomName;
+            document.getElementById('roomName').innerText = roomName;
             socket.emit('join-room', roomId, null);
             join('client');
         }
