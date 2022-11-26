@@ -394,10 +394,13 @@ server_io.on('connection', (socket) => {
             }
         });
         /* when music audio ended */
-        socket.on('yt-ended', () => {
+        socket.on('yt-ended', (state) => {
             let Time = Date.now();
             if (Time - lastTime[roomId] > 1800) {
                 lastTime[roomId] = Time;
+                if (state == 'error') {
+                    server_io.in(roomId).emit('musicroom-refresh', '', `Region Restriction | Skipping : ${music_list[roomId][0].title}`);
+                }
                 play_nextMusic(roomId, '');
             }
         });

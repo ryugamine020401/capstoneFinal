@@ -310,7 +310,10 @@ function add_newAudio(audio, audioStream, userid) {
 
 function add_ytAudio(audio, src, time, loop, pause) {
     let exist = document.getElementById('yt-music');
-    if (exist) exist.remove();
+    if (exist) {
+        exist.src = null;
+        exist.remove();
+    }
     let audioBox = document.getElementById("audioBox");
     audio.src = src;
     if (time != 0) {
@@ -321,15 +324,30 @@ function add_ytAudio(audio, src, time, loop, pause) {
     audio.loop = loop;
     audio.muted = mutedState;
     audio.volume = document.getElementById("music-volume").value * 0.01;
+    let ownCounter = 0;
+    let loadCompleted = false;
+    audio.addEventListener('loadstart', () => {
+        ownCounter += 1;
+        if (ownCounter != 1) return;
+        setTimeout(() => {
+            if (!loadCompleted) {
+                audio.src = null;
+                audio.remove();
+                socket.emit('yt-ended', 'error');
+            }
+        }, 3000);
+    });
     audio.addEventListener('loadedmetadata', () => {
-        if(!pause) audio.play();
+        loadCompleted = true;
+        if (!pause) audio.play();
         else audio.pause();
     });
     audio.addEventListener('ended', () => {
-        socket.emit('yt-ended');
         audio.src = null;
         audio.remove();
+        socket.emit('yt-ended', 'ended');
     });
+    socket.off('yt-operate');
     socket.on('yt-operate', (operate) => {
         if (operate == 'pause') audio.pause();
         if (operate == 'resume') audio.play();
