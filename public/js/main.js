@@ -310,7 +310,10 @@ function add_newAudio(audio, audioStream, userid) {
 
 function add_ytAudio(audio, src, time, loop, pause) {
     let exist = document.getElementById('yt-music');
-    if (exist) exist.remove();
+    if (exist) {
+        exist.src = '';
+        exist.remove();
+    }
     let audioBox = document.getElementById("audioBox");
     audio.src = src;
     if (time != 0) {
@@ -321,20 +324,34 @@ function add_ytAudio(audio, src, time, loop, pause) {
     audio.loop = loop;
     audio.muted = mutedState;
     audio.volume = document.getElementById("music-volume").value * 0.01;
+    audio.onloadstart = () => {
+        console.log('yt-music-onloadstart');
+        setTimeout(() => {
+            if (!loadCompleted) {
+                audio.src = '';
+                audio.remove();
+                socket.emit('yt-ended', 'error');
+            }
+        }, 3000);
+        audio.onloadstart = null;
+    };
+    let loadCompleted = false;
     audio.addEventListener('loadedmetadata', () => {
-        if(!pause) audio.play();
+        loadCompleted = true;
+        if (!pause) audio.play();
         else audio.pause();
     });
     audio.addEventListener('ended', () => {
-        socket.emit('yt-ended');
-        audio.src = null;
+        audio.src = '';
         audio.remove();
+        socket.emit('yt-ended', 'ended');
     });
+    socket.off('yt-operate');
     socket.on('yt-operate', (operate) => {
         if (operate == 'pause') audio.pause();
         if (operate == 'resume') audio.play();
         if (operate == 'skip') {
-            audio.src = null;
+            audio.src = '';
             audio.remove();
         }
         if (operate == 'loop') {
@@ -762,12 +779,12 @@ function Init() {
         document.getElementById("chat-container").style.display = 'none';
         document.getElementById("music-container").style.display = 'flex';
     });
-    document.getElementById("chatroom").addEventListener('mousewheel', () => {
+    document.getElementById("chatroom").addEventListener('scroll', () => {
         add_textRoom_goDownEvent(document.getElementById("chatroom"), 'goDown1',
         document.getElementById("chat-container"));
     });
-    document.getElementById("musicroom").addEventListener('mousewheel', () => {
-        add_textRoom_goDownEvent(document.getElementById("musicroom"), 'goDown2', 
+    document.getElementById("musicroom").addEventListener('scroll', () => {
+        add_textRoom_goDownEvent(document.getElementById("musicroom"), 'goDown2',
         document.getElementById("music-container"));
     });
     
@@ -1095,6 +1112,7 @@ function joinInit() {
         } else {
             myname = hostName;
             creat_class.style.display = 'none';
+            document.title = roomName;
             document.getElementById('roomName').innerText = roomName;
             socket.emit('join-room', 'creat', roomName);
             join('host');
@@ -1111,9 +1129,11 @@ function joinInit() {
             document.getElementById('user-name-input').value = '';
             alert('稱呼過長，請重新輸入 (最多15個字)');
         } else {
+            let roomName = roomName_arr[room_arr.indexOf(roomId)];
             myname = userName;
             join_class.style.display = 'none';
-            document.getElementById('roomName').innerText = roomName_arr[room_arr.indexOf(roomId)];
+            document.title = roomName;
+            document.getElementById('roomName').innerText = roomName;
             socket.emit('join-room', roomId, null);
             join('client');
         }

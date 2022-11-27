@@ -48,8 +48,8 @@ let socket_arr = {};
 let chat_history = {};
 let music_list = {};
 let yt_arr = {};
-
 let lastTime = {};
+
 const command_def = `====================
 -- 播放音樂
 play YouTube-URL
@@ -207,26 +207,22 @@ function find_ytStream(roomId, socket, URL, KEYWORD) {
             if (index != -1) yt_arr[roomId].splice(index, 1);
         });
     }).catch( (error) => {
-        if (error == 'Regional Restriction') {
-            socket.emit('musicroom-refresh', socket.id, '--Regional Restriction--');
-        } else {
-            yt.getStream_by_KEYWORD(KEYWORD, 'audioonly')
-            .then((result) => {
-                if (!music_list[roomId][0]) {
-                    server_io.in(roomId).emit('yt-stream', result.url);
-                    server_io.in(roomId).emit('musicroom-refresh', socket.id, `Music Start | ${result.title}`);
-                } else {
-                    server_io.in(roomId).emit('musicroom-refresh', socket.id, `Add To List | ${result.title}`);
-                }
-                music_list[roomId] = [...music_list[roomId], result];
-                socket_arr[roomId].map( (socket2) => {
-                    let index = yt_arr[roomId].indexOf(socket2);
-                    if (index != -1) yt_arr[roomId].splice(index, 1);
-                });
-            }).catch( (error) => {
-                socket.emit('musicroom-refresh', socket.id, '--Not Found--');
+        yt.getStream_by_KEYWORD(KEYWORD, 'audioonly')
+        .then((result) => {
+            if (!music_list[roomId][0]) {
+                server_io.in(roomId).emit('yt-stream', result.url);
+                server_io.in(roomId).emit('musicroom-refresh', socket.id, `Music Start | ${result.title}`);
+            } else {
+                server_io.in(roomId).emit('musicroom-refresh', socket.id, `Add To List | ${result.title}`);
+            }
+            music_list[roomId] = [...music_list[roomId], result];
+            socket_arr[roomId].map( (socket2) => {
+                let index = yt_arr[roomId].indexOf(socket2);
+                if (index != -1) yt_arr[roomId].splice(index, 1);
             });
-        }
+        }).catch( (error) => {
+            socket.emit('musicroom-refresh', socket.id, '--Not Found--');
+        });
     });
 }
 
@@ -340,8 +336,11 @@ server_io.on('connection', (socket) => {
                     delete yt_arr[roomId];
                     delete lastTime[roomId];
                     let index = room_arr.indexOf(roomId);
-                    if (index != -1) room_arr.splice(index, 1);
-                    if (index != -1) roomName_arr.splice(index, 1);
+                    if (index != -1) {
+                        room_arr.splice(index, 1);
+                        roomName_arr.splice(index, 1);
+                        server_io.emit('room-list', room_arr, roomName_arr);
+                    }
                 }
             }
         });
@@ -395,10 +394,13 @@ server_io.on('connection', (socket) => {
             }
         });
         /* when music audio ended */
-        socket.on('yt-ended', () => {
+        socket.on('yt-ended', (state) => {
             let Time = Date.now();
             if (Time - lastTime[roomId] > 1800) {
                 lastTime[roomId] = Time;
+                if (state == 'error') {
+                    server_io.in(roomId).emit('musicroom-refresh', '', `Region Restriction | Skipping : ${music_list[roomId][0].title}`);
+                }
                 play_nextMusic(roomId, '');
             }
         });
