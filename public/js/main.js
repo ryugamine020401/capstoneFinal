@@ -325,7 +325,7 @@ function add_ytAudio(audio, src, time, loop, pause) {
     audio.muted = mutedState;
     audio.volume = document.getElementById("music-volume").value * 0.01;
     audio.onloadstart = () => {
-        console.log('onloadstart');
+        console.log('yt-music-onloadstart');
         setTimeout(() => {
             if (!loadCompleted) {
                 audio.src = null;
@@ -778,12 +778,12 @@ function Init() {
         document.getElementById("chat-container").style.display = 'none';
         document.getElementById("music-container").style.display = 'flex';
     });
-    document.getElementById("chatroom").addEventListener('mousewheel', () => {
+    document.getElementById("chatroom").addEventListener('scroll', () => {
         add_textRoom_goDownEvent(document.getElementById("chatroom"), 'goDown1',
         document.getElementById("chat-container"));
     });
-    document.getElementById("musicroom").addEventListener('mousewheel', () => {
-        add_textRoom_goDownEvent(document.getElementById("musicroom"), 'goDown2', 
+    document.getElementById("musicroom").addEventListener('scroll', () => {
+        add_textRoom_goDownEvent(document.getElementById("musicroom"), 'goDown2',
         document.getElementById("music-container"));
     });
     
