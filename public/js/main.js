@@ -324,11 +324,8 @@ function add_ytAudio(audio, src, time, loop, pause) {
     audio.loop = loop;
     audio.muted = mutedState;
     audio.volume = document.getElementById("music-volume").value * 0.01;
-    let ownCounter = 0;
-    let loadCompleted = false;
-    audio.addEventListener('loadstart', () => {
-        ownCounter += 1;
-        if (ownCounter != 1) return;
+    audio.onloadstart = () => {
+        console.log('onloadstart');
         setTimeout(() => {
             if (!loadCompleted) {
                 audio.src = null;
@@ -336,7 +333,9 @@ function add_ytAudio(audio, src, time, loop, pause) {
                 socket.emit('yt-ended', 'error');
             }
         }, 3000);
-    });
+        audio.onloadstart = null;
+    };
+    let loadCompleted = false;
     audio.addEventListener('loadedmetadata', () => {
         loadCompleted = true;
         if (!pause) audio.play();
