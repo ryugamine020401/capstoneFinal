@@ -311,7 +311,7 @@ function add_newAudio(audio, audioStream, userid) {
 function add_ytAudio(audio, src, time, loop, pause) {
     let exist = document.getElementById('yt-music');
     if (exist) {
-        exist.src = null;
+        exist.src = '';
         exist.remove();
     }
     let audioBox = document.getElementById("audioBox");
@@ -328,7 +328,7 @@ function add_ytAudio(audio, src, time, loop, pause) {
         console.log('yt-music-onloadstart');
         setTimeout(() => {
             if (!loadCompleted) {
-                audio.src = null;
+                audio.src = '';
                 audio.remove();
                 socket.emit('yt-ended', 'error');
             }
@@ -342,7 +342,7 @@ function add_ytAudio(audio, src, time, loop, pause) {
         else audio.pause();
     });
     audio.addEventListener('ended', () => {
-        audio.src = null;
+        audio.src = '';
         audio.remove();
         socket.emit('yt-ended', 'ended');
     });
@@ -351,7 +351,7 @@ function add_ytAudio(audio, src, time, loop, pause) {
         if (operate == 'pause') audio.pause();
         if (operate == 'resume') audio.play();
         if (operate == 'skip') {
-            audio.src = null;
+            audio.src = '';
             audio.remove();
         }
         if (operate == 'loop') {
