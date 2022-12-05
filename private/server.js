@@ -117,7 +117,7 @@ function ctrl_BOT(roomId, socket, command, speaker) {
             return true;
         case 'clear':
             if (speaker) {
-                music_list[roomId] = [music_list[roomId][0]];
+                if (music_list[roomId][0]) music_list[roomId] = [music_list[roomId][0]];
                 server_io.in(roomId).emit('musicroom-refresh', socket.id, '--Music Clear--');
             } else {
                 socket.emit('musicroom-refresh', socket.id, '--權限不夠--');
@@ -268,10 +268,10 @@ server = https.createServer(options[OPTION_KEY], (request, response) => {
 });
 
 /* ###################################################################### */
-server_io = require('socket.io')(server, {
+server_io = require('socket.io')(server/*, {
     pingTimeout: 5000,
     pingInterval: 10000
-});
+}*/);
 
 server_io.on('connection', (socket) => {
     socket.emit('room-list', room_arr, roomName_arr);
@@ -396,9 +396,9 @@ server_io.on('connection', (socket) => {
         /* when music audio ended */
         socket.on('yt-ended', (state) => {
             let Time = Date.now();
-            if (Time - lastTime[roomId] > 1800) {
+            if (Time - lastTime[roomId] > 3000) {
                 lastTime[roomId] = Time;
-                if (state == 'error') {
+                if (state == 'error' && music_list[roomId][0]) {
                     server_io.in(roomId).emit('musicroom-refresh', '', `Region Restriction | Skipping : ${music_list[roomId][0].title}`);
                 }
                 play_nextMusic(roomId, '');
