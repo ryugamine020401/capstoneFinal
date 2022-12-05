@@ -332,7 +332,7 @@ function add_ytAudio(audio, src, time, loop, pause) {
                 audio.remove();
                 socket.emit('yt-ended', 'error');
             }
-        }, 3000);
+        }, 4000);
         audio.onloadstart = null;
     };
     let loadCompleted = false;
