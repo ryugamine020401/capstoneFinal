@@ -268,10 +268,7 @@ server = https.createServer(options[OPTION_KEY], (request, response) => {
 });
 
 /* ###################################################################### */
-server_io = require('socket.io')(server, {
-    pingTimeout: 5000,
-    pingInterval: 10000
-});
+server_io = require('socket.io')(server);
 
 server_io.on('connection', (socket) => {
     socket.emit('room-list', room_arr, roomName_arr);
